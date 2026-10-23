@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+  <name>Rimlore</name>
+  <author>Cavan</author>
+  <packageId>cavan.rimlore</packageId>
+  <url>https://github.com/xCavanx/Rimlore</url>
+  <modVersion>0.0.3</modVersion>
+  <supportedVersions>
+    <li>1.6</li>
+    <li>1.7</li>
+  </supportedVersions>
+  <description>Every colony has a story. Rimlore writes it down.
+
+I wanted a way to look back on my colonies. Rimlore remembers all of it for you.
+
+It keeps a running history of everyone in your colony (colonists, prisoners, slaves, mechs and animals) and everything that happened to them. You can read it in game, or open it in your browser as a proper record of your colony's life.
+
+What it keeps track of
+- Who came and who went: births, recruits, tamed animals and captures, plus deaths and anyone who left, escaped or was sold.
+- Every letter the game sends you, plus messages and tales if you want them.
+- How your pawns change over time: skills and passions, traits, injuries and scars, relationships, animal training and more.
+- Faith, if you have Ideology, who converted, and when an ideoligion took up or dropped a meme.
+- Your own notes. Select a pawn, click Add note, and write down whatever you want to remember.
+
+Reading it back
+- There's a Lore button next to History on the bottom bar. You can search and filter it, and click an entry to jump straight to that pawn.
+- Click "Open viewer" to see the whole history in your browser. There's a timeline, a page for every colonist and animal, a Memorial for the ones you lost, and tabs for relationships and beliefs. Each pawn's page shows how they grew, like "Medicine 9 → 13" or "Learned: Rescue".
+
+A few things worth knowing
+- Rimlore only reads what the game already shows you, so it's light and shouldn't clash with your other mods.
+- You can add it to a save you're already playing. It picks up whatever history the game still remembers (Not tested for all info)
+- You can remove it mid-save too. You'll get one harmless red error the next time you load, and that's it (Maybe missing data e.g. Skill tracking starts from mod installation vs Pawn creation for on-going saves)
+- Save scummers welcome. If you reload an earlier save, anything after that point is marked "rewound" instead of getting mixed into your real history.
+- Your history is kept next to your Saves folder, in a folder called Rimlore. The mod settings show the exact path.
+
+Source code, bug reports and ideas: https://github.com/xCavanx/Rimlore</description>
+</ModMetaData>

@@ -1,0 +1,11 @@
+Source/Rimlore/obj/
+Source/Rimlore/bin/
+1.6/Assemblies/
+1.7/Assemblies/
+dist/
+
+.vs/
+.vscode/
+.idea/
+*.user
+*.swp

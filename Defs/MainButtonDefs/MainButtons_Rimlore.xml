@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <MainButtonDef>
+    <defName>Rimlore</defName>
+    <label>lore</label>
+    <description>Your colony's history: who came, who left, who died, and everything in between.</description>
+    <tabWindowClass>ColonyChronicle.MainTabWindow_Chronicle</tabWindowClass>
+    <order>85</order>
+    <validWithoutMap>true</validWithoutMap>
+  </MainButtonDef>
+</Defs>

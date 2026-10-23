@@ -1,0 +1,30 @@
+[h1]Every colony has a story. Rimlore writes it down.[/h1]
+
+I wanted a way to look back on my colonies and the history of my saves. Rimlore aims to capture and store the hisoptry of your colony.
+
+It keeps a running history of everyone in your colony (colonists, prisoners, slaves, mechs and animals) and everything that happened to them. You can read it in game, or open it in your browser as a proper record of your colony's life.
+
+[h2]What it keeps track of:[/h2]
+[list]
+[*]Who came and who went including births, recruits, tamed animals and captures, plus deaths and anyone who left, escaped or was sold.
+[*] Every letter the game sends you, including perosnal notes you can add.
+[*]How your pawns change over time including skills changes and passions, traits, injuries and scars, relationships, animal training and more.
+[*]If you have Ideology, it will showcase your ideology, who converted other information such as memes, precepts etc.
+[/list]
+
+[h2]Reading it back:[/h2]
+[list]
+[*]There's a [b]Lore[/b] button next to History on the bottom bar. You can search and filter it, and click an entry to jump straight to that pawn.
+[*]Click [b]Open viewer[/b] to see the whole history in your browser. There's a timeline, a page for every colonist and animal, a Memorial for the ones you lost, and tabs for relationships and beliefs. Each pawn's page shows how they grew, like [i]Medicine 9 → 13[/i] or [i]Learned: Rescue[/i].
+[/list]
+
+[h2]A few things worth knowing:[/h2]
+[list]
+[*]Rimlore utilizes your save file to read informaiton, making it lightweight.
+[*]You can add it to a save you're already playing. It picks up whatever history the game still remembers (Not tested extensively).
+[*]You can remove it mid-save. You'll get one harmless red error the next time you load, and that's it.
+[*]If you reload your save to an earlier point, any events that are lost will be marked as 'Rewound' in a toggle.
+[*]Your history is kept next to your Saves folder, in a folder called Rimlore. The mod settings show the exact path.
+[/list]
+
+Source code, bug reports and ideas: [url=https://github.com/xCavanx/Rimlore]github.com/xCavanx/Rimlore[/url]

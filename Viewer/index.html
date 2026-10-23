@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rimlore</title>
+<style>
+  :root {
+    --bg: #1b1d20; --panel: #24272b; --panel2: #2c3035; --line: #3a3f45;
+    --text: #e4e2dc; --muted: #9a9890; --accent: #d9b56a;
+    --good: #7dcf86; --bad: #e57368; --warn: #e2b25b; --note: #8db8f0; --tale: #c6a3ee;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f3f1ec; --panel: #ffffff; --panel2: #f7f5f0; --line: #ddd8cc;
+      --text: #24221e; --muted: #6f6b62; --accent: #946a1c;
+      --good: #2f8a3c; --bad: #b8392d; --warn: #a06d0e; --note: #2f63b0; --tale: #7a4bb5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 18px 24px 0; border-bottom: 1px solid var(--line); background: var(--panel); }
+  h1 { margin: 0; font-size: 22px; letter-spacing: .02em; }
+  h1 small { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  .stats { display: flex; gap: 22px; flex-wrap: wrap; margin: 10px 0 12px; color: var(--muted); }
+  .stats b { color: var(--text); font-size: 18px; display: block; }
+  nav { display: flex; gap: 2px; flex-wrap: wrap; }
+  nav button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); padding: 8px 14px; font: inherit; cursor: pointer; }
+  nav button.on { color: var(--text); border-color: var(--accent); }
+  main { padding: 18px 24px 60px; max-width: 1200px; margin: 0 auto; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  input[type=search], select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; font: inherit; }
+  input[type=search] { min-width: 220px; flex: 1; max-width: 360px; }
+  .chip { border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 999px; padding: 4px 11px; cursor: pointer; font: inherit; font-size: 13px; }
+  .chip.on { color: var(--text); border-color: var(--accent); background: var(--panel2); }
+  .btn { border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; }
+  label.tog { color: var(--muted); font-size: 13px; display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+  .year { margin: 22px 0 6px; color: var(--accent); font-weight: 600; font-size: 15px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .ev { display: grid; grid-template-columns: 170px 96px 1fr; gap: 10px; padding: 7px 8px; border-radius: 6px; }
+  .ev:hover { background: var(--panel); }
+  .ev .d { color: var(--muted); font-size: 12.5px; padding-top: 1px; }
+  .ev .c { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
+  .ev .l { cursor: default; }
+  .ev details summary { cursor: pointer; list-style: none; }
+  .ev details summary::-webkit-details-marker { display: none; }
+  .ev details[open] summary { margin-bottom: 4px; }
+  .ev .t { white-space: pre-wrap; color: var(--muted); font-size: 13px; }
+  .ev.rewound { opacity: .45; }
+  .ev.rewound .l::after { content: " (rewound)"; color: var(--muted); font-size: 12px; }
+  .pn { color: var(--note); cursor: pointer; text-decoration: none; }
+  .pn:hover { text-decoration: underline; }
+  .who { color: var(--muted); font-size: 13px; }
+  .session { color: var(--muted); font-size: 12px; padding: 6px 8px; font-style: italic; }
+  .c-died, .c-threat { color: var(--bad); } .c-good { color: var(--good); } .c-warn { color: var(--warn); }
+  .c-note { color: var(--note); } .c-faith { color: var(--accent); } .c-tale { color: var(--tale); } .c-muted { color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; cursor: pointer; }
+  .card:hover { border-color: var(--accent); }
+  .card h3 { margin: 0 0 2px; font-size: 15px; }
+  .card .sub { color: var(--muted); font-size: 12.5px; }
+  .badge { display: inline-block; font-size: 11px; border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: 2px; background: var(--panel2); border: 1px solid var(--line); color: var(--muted); }
+  .badge.dead { color: var(--bad); border-color: var(--bad); }
+  .badge.gone { color: var(--warn); border-color: var(--warn); }
+  .mini { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+  .bio { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+  @media (max-width: 860px) { .bio { grid-template-columns: 1fr; } .ev { grid-template-columns: 1fr; gap: 2px; } }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .box h4 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .skill { display: grid; grid-template-columns: 96px 1fr 26px; gap: 8px; align-items: center; font-size: 13px; margin: 3px 0; }
+  .bar { height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .tags span { display: inline-block; background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 12.5px; }
+  .chg { padding: 5px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .chg:last-child { border-bottom: 0; }
+  .chg .d { color: var(--muted); font-size: 12px; margin-right: 8px; }
+  .up { color: var(--good); } .down { color: var(--bad); }
+  .empty { color: var(--muted); padding: 30px 0; text-align: center; }
+  #drop { border: 2px dashed var(--line); border-radius: 12px; padding: 40px; text-align: center; color: var(--muted); margin-top: 30px; }
+  #drop.hover { border-color: var(--accent); color: var(--text); }
+  .back { margin-bottom: 12px; }
+  table.rec { border-collapse: collapse; width: 100%; font-size: 13px; }
+  @media print {
+    nav, .toolbar, #back, #reload { display: none !important; }
+    :root, :root[data-theme] { --bg: #fff; --panel: #fff; --panel2: #f4f4f4; --line: #ccc; --text: #000; --muted: #555; }
+    .box, .card { break-inside: avoid; }
+  }
+  .skill { grid-template-columns: 104px 1fr 22px 70px; }
+  .skill .from { font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+  .op { display: grid; grid-template-columns: 1fr 120px 44px; gap: 8px; align-items: center; font-size: 13px; margin: 3px 0; }
+  .opbar { position: relative; height: 8px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; }
+  .opbar i { position: absolute; top: 0; bottom: 0; }
+  .opbar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; border-left: 1px solid var(--muted); }
+  .pair { padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+  .pair:last-child { border-bottom: 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+  .ideo-link { color: var(--accent); cursor: pointer; }
+  .ev .lines { margin-top: 6px; }
+  .c-fight { color: var(--bad); }
+  .cb { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 4px 6px; border-radius: 4px; font-size: 13.5px; align-items: start; }
+  .cb:nth-child(even) { background: var(--panel2); }
+  .cb svg { width: 20px; height: 20px; display: block; }
+  .cn { color: var(--accent); }
+  .box .cb:nth-child(even) { background: var(--panel2); }
+  table.rec td { padding: 2px 0; } table.rec td:last-child { text-align: right; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Rimlore <small id="subtitle"></small></h1>
+  <div class="stats" id="stats"></div>
+  <nav id="nav"></nav>
+</header>
+<main id="main"></main>
+
+<script>
+  window.__CHRONICLE = [];
+  function C(r) { window.__CHRONICLE.push(r); }
+</script>
+<script src="chronicle-data.js"></script>
+<script>
+(() => {
+  "use strict";
+  const $ = (s, el = document) => el.querySelector(s);
+  const esc = s => String(s ?? "").replace(/<\/?(color|b|i|size)(=[^>]*)?>/gi, "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const TICKS_PER_YEAR = 3600000;
+
+  const COMBAT_TALES = new Set(["Wounded", "Downed", "Hunted", "SocialFight", "DefeatedHostileFactionLeader", "CaravanAmbushedByHumanlike",
+    "CaravanAmbushDefeated", "CaravanAssaultSuccessful", "CaravanFled"]);
+  const isCombatTale = e => e.cat === "tale" && (COMBAT_TALES.has(e.sub) || /^Killed/.test(e.sub || ""));
+  const LIFE = new Set(["colony", "founded", "joined", "born", "tamed", "captured", "recruited", "died", "left", "status"]);
+  const FILTERS = [
+    ["all", "All"], ["life", "Arrivals & departures"], ["died", "Deaths"], ["fights", "Fights"], ["letter", "Letters"],
+    ["threat", "Threats"], ["faith", "Faith"], ["tale", "Tales"], ["message", "Messages"], ["note", "Notes"],
+  ];
+
+  const STORY_TYPES = [["all", "All"], ["fights", "Fights"], ["life", "Life events"], ["changes", "Changes"], ["faith", "Faith"],
+    ["letter", "Letters"], ["tale", "Tales"], ["message", "Messages"], ["note", "Notes"]];
+
+  let D = null;
+  const state = { tab: "timeline", filter: "all", q: "", showRewound: false, pawn: null, sort: "name", showHunts: false, storyFilter: "all", storyQ: "" };
+
+  function parseFileText(text) {
+    const out = [];
+    for (let line of text.split("\n")) {
+      line = line.trim();
+      if (!line) continue;
+      if (line.startsWith("C(")) line = line.slice(2).replace(/\);?$/, "");
+      try { out.push(JSON.parse(line)); } catch (e) { }
+    }
+    return out;
+  }
+
+  function process(records) {
+    const events = [], snaps = [], sessions = [], ideoSnaps = [], combat = [], battleRecs = [];
+    const all = [];
+    for (const r of records) {
+      if (r.t === "session" && (r.kind === "loaded" || r.kind === "attached")) {
+        for (const x of all) if (x.tick > r.tick) x.rewound = true;
+      }
+      all.push(r);
+      if (r.t === "event") events.push(r);
+      else if (r.t === "snap") snaps.push(r);
+      else if (r.t === "session") sessions.push(r);
+      else if (r.t === "ideo") ideoSnaps.push(r);
+      else if (r.t === "combat") combat.push(r);
+      else if (r.t === "battle") battleRecs.push(r);
+    }
+
+    events.sort((a, b) => a.tick - b.tick);
+
+    const deaths = events.filter(e => e.cat === "died");
+    const merged = new Set();
+    for (const e of events) {
+      if (e.cat !== "letter" || e.sub !== "Death" || !(e.pawns || []).length) continue;
+      const died = deaths.find(d => d.rewound === e.rewound && Math.abs(d.tick - e.tick) <= 60000 && d.pawns.some(id => e.pawns.includes(id)));
+      if (!died) continue;
+      if (e.text && !(died.text || "").includes(e.text)) died.text = (died.text ? died.text + "\n\n" : "") + e.text;
+      merged.add(e);
+    }
+    if (merged.size) events.splice(0, events.length, ...events.filter(e => !merged.has(e)));
+    snaps.sort((a, b) => a.tick - b.tick);
+
+    const pawns = new Map();
+    const getP = id => {
+      if (!pawns.has(id)) pawns.set(id, { id, snaps: [], events: [], battles: [], status: "present", name: null });
+      return pawns.get(id);
+    };
+    for (const s of snaps) {
+      if (s.rewound) continue;
+      const p = getP(s.pawn.id);
+      p.snaps.push(s);
+      p.latest = s.pawn;
+      p.name = s.pawn.short || s.pawn.name;
+    }
+    for (const e of events) {
+      (e.pawns || []).forEach((id, i) => {
+        const p = getP(id);
+        if (!p.name && e.names) p.name = e.names[i];
+        p.events.push(e);
+        if (e.rewound) return;
+        if (e.cat === "died") { p.status = "dead"; p.endDate = e.date; p.endCause = tidyCause(e.cause); }
+        else if (e.cat === "left") { p.status = "gone"; p.endDate = e.date; }
+        else if (["joined", "born", "tamed", "recruited", "captured", "founded"].includes(e.cat)) {
+          if (p.status !== "present") p.status = "present";
+          p.startDate ??= e.date;
+        }
+      });
+    }
+    for (const [id, p] of pawns) if (!p.latest) pawns.delete(id);
+    for (const p of pawns.values()) p.startDate ??= p.snaps[0]?.date;
+
+    ideoSnaps.sort((a, b) => a.tick - b.tick);
+    const ideos = new Map();
+    for (const r of ideoSnaps) {
+      if (r.rewound) continue;
+      if (!ideos.has(r.ideo.id)) ideos.set(r.ideo.id, { id: r.ideo.id, snaps: [] });
+      const i = ideos.get(r.ideo.id);
+      i.snaps.push(r);
+      i.latest = r.ideo;
+    }
+
+    const battles = buildBattles(combat, battleRecs);
+    for (const b of battles) for (const id of b.pawns) pawns.get(id)?.battles.push(b);
+
+    const lastSession = [...sessions].reverse().find(s => s.kind !== "renamed");
+    const colony = [...sessions].reverse().find(s => s.colony)?.colony || "Colony";
+    return { events, snaps, sessions, pawns, colony, lastSession, ideos, battles };
+  }
+
+  function buildBattles(combat, battleRecs) {
+    const into = new Map(), names = new Map();
+    for (const r of battleRecs) {
+      if (r.rewound) continue;
+      if (r.into) into.set(r.id, r.into);
+      if (r.name) names.set(r.id, r.name);
+    }
+    const root = id => {
+      const seen = new Set();
+      while (into.has(id) && !seen.has(id)) { seen.add(id); id = into.get(id); }
+      return id;
+    };
+    const byId = new Map(), seenLogs = new Set();
+    for (const c of combat) {
+      if (c.rewound || seenLogs.has(c.log)) continue;
+      seenLogs.add(c.log);
+      const id = root(c.battle);
+      if (!byId.has(id)) byId.set(id, { id, lines: [], pawns: new Set(), who: new Map(), parts: new Set(), animals: new Set() });
+      const b = byId.get(id);
+      b.lines.push(c);
+      b.parts.add(c.battle);
+      (c.pawns || []).forEach((p, i) => { b.pawns.add(p); if (c.names?.[i]) b.who.set(p, c.names[i]); });
+      (c.animals || []).forEach(a => b.animals.add(a));
+    }
+    const list = [...byId.values()];
+    for (const b of list) {
+      b.lines.sort((x, y) => x.tick - y.tick || x.log - y.log);
+      b.name = names.get(b.id) || [...b.parts].map(x => names.get(x)).find(Boolean) || "Fight";
+      b.start = b.lines[0];
+      b.end = b.lines[b.lines.length - 1];
+    }
+    return list.sort((x, y) => y.end.tick - x.end.tick);
+  }
+
+  function yearOf(r) {
+    const m = /(\d{4,5})(?!.*\d{4})/.exec(r.date || "");
+    if (m) return m[1];
+    return "Year " + (Math.floor((r.tick || 0) / TICKS_PER_YEAR) + 1);
+  }
+
+  function catClass(e) {
+    switch (e.cat) {
+      case "died": return "c-died";
+      case "born": case "joined": case "recruited": case "tamed": case "founded": case "colony": return "c-good";
+      case "left": case "captured": case "status": return "c-warn";
+      case "note": return "c-note";
+      case "tale": return isCombatTale(e) ? "c-fight" : "c-tale";
+      case "faith": return "c-faith";
+      case "letter":
+        if (["ThreatBig", "ThreatSmall", "Death"].includes(e.sub)) return "c-threat";
+        if (e.sub === "PositiveEvent") return "c-good";
+        return "";
+      default: return "c-muted";
+    }
+  }
+
+  function catLabel(e) {
+    if (e.cat === "letter") return ({ ThreatBig: "Major threat", ThreatSmall: "Threat", Death: "Death", NegativeEvent: "Bad event", PositiveEvent: "Good event" })[e.sub] || "Letter";
+    if (e.cat === "note") return e.sub === "player" ? "Your note" : "Note";
+    if (isCombatTale(e)) return "combat";
+    if (e.cat === "faith") return ({ converted: "Converted", meme: "Meme", reformed: "Reformed" })[e.sub] || "Faith";
+    if (e.sub === "resurrected") return "Resurrected";
+    if (e.sub === "returned") return "Returned";
+    return e.cat;
+  }
+
+  function matchesFilter(e) {
+    switch (state.filter) {
+      case "all": return true;
+      case "life": return LIFE.has(e.cat);
+      case "died": return e.cat === "died" || (e.cat === "letter" && e.sub === "Death");
+      case "fights": return isCombatTale(e);
+      case "tale": return e.cat === "tale" && !isCombatTale(e);
+      case "threat": return e.cat === "letter" && (e.sub === "ThreatBig" || e.sub === "ThreatSmall");
+      default: return e.cat === state.filter;
+    }
+  }
+
+  function matchesSearch(e) {
+    if (!state.q) return true;
+    const q = state.q.toLowerCase();
+    return (e.label || "").toLowerCase().includes(q) || (e.text || "").toLowerCase().includes(q)
+      || (e.names || []).some(n => (n || "").toLowerCase().includes(q));
+  }
+
+  function pawnLink(id, name) {
+    return D.pawns.has(id) ? `<a class="pn" data-pawn="${esc(id)}">${esc(name)}</a>` : esc(name);
+  }
+
+  function linkNames(e) {
+    let html = esc(e.label);
+    (e.pawns || []).forEach((id, i) => {
+      const n = e.names?.[i];
+      if (!n || !D.pawns.has(id)) return;
+      const en = esc(n);
+      html = html.split(en).join(`<a class="pn" data-pawn="${esc(id)}">${en}</a>`);
+    });
+    return html;
+  }
+
+  function eventRow(e) {
+    const hasText = e.text && e.text !== e.label;
+    const seen = new Set();
+    const missing = (e.pawns || []).map((id, i) => [id, e.names?.[i]])
+      .filter(([id, n]) => n && !(e.label || "").includes(n) && !seen.has(n) && seen.add(n));
+    const label = linkNames(e) + (missing.length
+      ? ` <span class="who">— ${missing.map(([id, n]) => pawnLink(id, n)).join(", ")}</span>` : "");
+    const inner = hasText
+      ? `<details><summary class="l">${label}</summary><div class="t">${esc(e.text)}</div></details>`
+      : `<div class="l">${label}</div>`;
+    return `<div class="ev${e.rewound ? " rewound" : ""}"><div class="d">${esc(e.date)}</div><div class="c ${catClass(e)}">${esc(catLabel(e))}</div>${inner}</div>`;
+  }
+
+  const ICONS = {
+    hit: `<g fill="#b3261e"><circle cx="10" cy="11" r="5.6"/><circle cx="4.6" cy="5.8" r="2.3"/><circle cx="15.2" cy="4.8" r="1.9"/><circle cx="16.3" cy="15.4" r="2.1"/><circle cx="4" cy="16.2" r="1.6"/><circle cx="12.5" cy="17.6" r="1.2"/></g>`,
+    down: `<path fill="#e8c341" d="M8.4 2.5h3.2l-.7 10H9.1z"/><circle cx="10" cy="16" r="1.8" fill="#e8c341"/>`,
+    death: `<path fill="#ece9e2" d="M10 2.2c-4.1 0-6.7 2.9-6.7 6.5 0 2.1.9 3.6 2.3 4.5v3.2h8.8v-3.2c1.4-.9 2.3-2.4 2.3-4.5 0-3.6-2.6-6.5-6.7-6.5z"/><circle cx="7.3" cy="9.2" r="1.8" fill="#1b1d20"/><circle cx="12.7" cy="9.2" r="1.8" fill="#1b1d20"/><path fill="#1b1d20" d="M9.3 16.4h1.4v-2h-1.4z"/>`,
+    other: `<circle cx="10" cy="10" r="3" fill="#9a9890"/>`,
+  };
+  const CROSSHAIR_PATH = `<circle cx="10" cy="10" r="6.6"/><path d="M10 .8v5.4M10 13.8v5.4M.8 10h5.4M13.8 10h5.4"/>`;
+  const CROSSHAIR = `<g fill="none" stroke="#141517" stroke-width="3">${CROSSHAIR_PATH}</g><g fill="none" stroke="#ff5146" stroke-width="1.5">${CROSSHAIR_PATH}</g>`;
+
+  function combatIcon(c, pov) {
+    const base = ICONS[c.kind];
+    const target = c.by && (pov ? c.by === pov : D.pawns.has(c.by));
+    if (!base && !target) return "";
+    return `<svg viewBox="0 0 20 20" aria-hidden="true">${base || ""}${target ? CROSSHAIR : ""}</svg>`;
+  }
+
+  function nameLinks(text, who) {
+    const html = esc(text);
+    const names = [...new Set([...who.values()].filter(Boolean))].sort((a, b) => b.length - a.length);
+    if (!names.length) return html;
+    const idOf = new Map([...who].map(([id, n]) => [esc(n), id]));
+    const re = new RegExp(`(\\b[Tt]he )?(${names.map(n => esc(n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "g");
+    return html.replace(re, (m, the, name) => {
+      const id = idOf.get(name);
+      return id && D.pawns.has(id) ? `${the || ""}<a class="pn" data-pawn="${esc(id)}">${name}</a>` : `<span class="cn">${m}</span>`;
+    });
+  }
+
+  function combatLine(c, b, pov) {
+    return `<div class="cb" title="${esc(c.date)}"><div>${combatIcon(c, pov)}</div><div>${nameLinks(c.text, b.who)}</div></div>`;
+  }
+
+  function battleLines(b, pov) {
+    return linesFor(b, pov).slice().reverse().map(c => combatLine(c, b, pov)).join("");
+  }
+
+  const victimOf = c => (c.pawns || []).find(id => id !== c.by);
+  const linesFor = (b, pov) => pov ? b.lines.filter(c => (c.pawns || []).includes(pov)) : b.lines;
+  const nameList = (b, ids) => [...new Set(ids)].map(id => b.who.get(id) || "someone").join(", ");
+
+  function fightOutcome(b, pov) {
+    let landed = 0, taken = 0, downed = false, died = false;
+    const downedOthers = [], kills = [];
+    for (const c of linesFor(b, pov)) {
+      const mine = c.by === pov, victim = victimOf(c);
+      if (c.kind === "hit") { if (mine) landed++; else taken++; }
+      else if (c.kind === "down") { if (mine) downedOthers.push(victim); else if (victim === pov) downed = true; }
+      else if (c.kind === "death") { if (mine) kills.push(victim); else if (victim === pov) died = true; }
+    }
+    return { landed, taken, downed, died, downedOthers, kills };
+  }
+
+  function isHunt(b, pov) {
+    const others = [...b.pawns].filter(id => !D.pawns.has(id));
+    if (!others.length || !others.every(id => b.animals.has(id))) return false;
+    const o = fightOutcome(b, pov);
+    return o.taken === 0 && !o.downed && !o.died;
+  }
+
+  function fightSummary(b, pov) {
+    const parts = [];
+    if (pov) {
+      const o = fightOutcome(b, pov);
+      if (o.taken) parts.push(`took ${o.taken} hit${o.taken === 1 ? "" : "s"}`);
+      if (o.landed) parts.push(`landed ${o.landed}`);
+      if (o.downedOthers.length) parts.push(`downed ${nameList(b, o.downedOthers)}`);
+      if (o.kills.length) parts.push(`killed ${nameList(b, o.kills)}`);
+      if (o.downed) parts.push("was downed");
+      if (o.died) parts.push("died");
+    } else {
+      const downed = b.lines.filter(c => c.kind === "down").map(victimOf), died = b.lines.filter(c => c.kind === "death").map(victimOf);
+      if (downed.length) parts.push(`downed: ${nameList(b, downed)}`);
+      if (died.length) parts.push(`died: ${nameList(b, died)}`);
+    }
+    const n = linesFor(b, pov).length;
+    parts.push(`${n} line${n === 1 ? "" : "s"}`);
+    return parts.join(" · ");
+  }
+
+  function notableFight(b) {
+    return b.lines.some(c => (c.kind === "down" || c.kind === "death") && D.pawns.has(victimOf(c)));
+  }
+
+  function fightMatches(b) {
+    if (!state.q) return true;
+    const q = state.q.toLowerCase();
+    return b.name.toLowerCase().includes(q) || [...b.who.values()].some(n => (n || "").toLowerCase().includes(q))
+      || b.lines.some(c => c.text.toLowerCase().includes(q));
+  }
+
+  function fightRow(b, pov) {
+    const when = b.start.date === b.end.date ? "" : ` title="Until ${esc(b.end.date)}"`;
+    return `<div class="ev"><div class="d"${when}>${esc(b.start.date)}</div><div class="c c-fight">${pov && isHunt(b, pov) ? "hunt" : "fight"}</div>
+      <details data-battle="${esc(b.id)}"${pov ? ` data-pov="${esc(pov)}"` : ""}><summary class="l">${nameLinks(b.name, b.who)} <span class="who">— ${nameLinks(fightSummary(b, pov), b.who)}</span></summary><div class="lines"></div></details></div>`;
+  }
+
+  function renderHeader() {
+    const modVersion = [...D.sessions].reverse().find(s => s.mod)?.mod;
+    $("#title").innerHTML = `${esc(D.colony)} <small>Rimlore${modVersion ? ` v${esc(modVersion)}` : ""}</small>`;
+    const ps = [...D.pawns.values()];
+    const alive = k => ps.filter(p => p.status === "present" && p.latest.kind === k).length;
+    const deaths = D.events.filter(e => !e.rewound && e.cat === "died").length;
+    const first = D.events.find(e => !e.rewound), last = D.lastSession;
+    $("#stats").innerHTML = [
+      ["Colonists", alive("colonist")], ["Animals", alive("animal")],
+      ["Prisoners & slaves", alive("prisoner") + alive("slave")], ["Mechs", alive("mech")],
+      ["Deaths recorded", deaths], ["Events", D.events.filter(e => !e.rewound).length],
+      ["Since", first ? first.date : "-"],
+    ].map(([k, v]) => `<div><b>${esc(v)}</b>${esc(k)}</div>`).join("") +
+      (last ? `<div><b>${esc(last.game || "")}</b>Last session ${esc(last.realTime || "")}</div>` : "");
+
+    const tabs = [["timeline", "Timeline"], ["colonist", "Colonists"], ["animal", "Animals"], ["other", "Prisoners, slaves & mechs"],
+      ["relations", "Relationships"], ...(hasFaith() ? [["beliefs", "Beliefs"]] : []), ["memorial", "Memorial"]];
+    $("#nav").innerHTML = tabs.map(([k, l]) => `<button data-tab="${k}" class="${state.tab === k && !state.pawn ? "on" : ""}">${l}</button>`).join("")
+      + `<button id="reload" title="Reload chronicle-data.js (the game keeps writing it while you play)">↻ Refresh</button>`;
+  }
+
+  function renderTimeline() {
+    const evs = D.events.filter(e => (state.showRewound || !e.rewound) && matchesFilter(e) && matchesSearch(e));
+    const fights = state.filter === "fights" || state.filter === "all"
+      ? D.battles.filter(b => (state.filter === "fights" || notableFight(b)) && fightMatches(b)) : [];
+    const rows = [...evs.map(e => ({ r: e, html: () => eventRow(e) })), ...fights.map(b => ({ r: b.start, html: () => fightRow(b) }))]
+      .sort((a, b) => a.r.tick - b.r.tick);
+    const rewoundCount = D.events.filter(e => e.rewound).length;
+    let html = `<div class="toolbar">
+      <input type="search" id="q" placeholder="Search events and names..." value="${esc(state.q)}">
+      ${FILTERS.map(([k, l]) => `<button class="chip${state.filter === k ? " on" : ""}" data-filter="${k}">${l}</button>`).join("")}
+      ${rewoundCount ? `<label class="tog"><input type="checkbox" id="rew" ${state.showRewound ? "checked" : ""}> Show ${rewoundCount} rewound events</label>` : ""}
+    </div>`;
+    if (state.filter === "all" && D.battles.length) html += `<div class="c-muted" style="margin:-6px 0 10px;font-size:13px">Fights appear here when one of your pawns was downed or killed. The Fights filter shows every fight, hunts included.</div>`;
+    if (!rows.length) return html + `<div class="empty">${state.filter === "fights" ? "No fights recorded yet. Combat is recorded from Rimlore 0.0.3 on, starting with whatever the game still remembers." : "Nothing matches."}</div>`;
+
+    let year = null, chunks = [];
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const row = rows[i], y = yearOf(row.r);
+      if (y !== year) { chunks.push(`<div class="year">${esc(y)}</div>`); year = y; }
+      chunks.push(row.html());
+      if (chunks.length > 4000) { chunks.push(`<div class="empty">Showing the newest 4000 events. Use the filters or search to narrow it down.</div>`); break; }
+    }
+    return html + chunks.join("");
+  }
+
+  function topSkills(p) {
+    return (p.skills || []).filter(s => s.level >= 0).sort((a, b) => b.level - a.level).slice(0, 3)
+      .map(s => `${s.name} ${s.level}${s.passion === "Major" ? "🔥🔥" : s.passion === "Minor" ? "🔥" : ""}`).join(" · ");
+  }
+
+  function tidyCause(c) {
+    if (!c) return c;
+    return c.replace(/, after: (.*)$/, (m, blow) => /\b(died|downed|was killed)\b/i.test(blow) ? "" : ` — ${blow}`);
+  }
+
+  function shortCause(c) {
+    return c.length > 70 ? c.slice(0, 67) + "…" : c;
+  }
+
+  function statusBadge(p) {
+    if (p.status === "dead") return `<span class="badge dead">died</span>`;
+    if (p.status === "gone") return `<span class="badge gone">left</span>`;
+    return "";
+  }
+
+  function card(p) {
+    const s = p.latest;
+    const sub = [s.kind !== "colonist" && s.kind !== "animal" ? s.kind : null, s.xenotype && s.xenotype !== "Baseliner" ? s.xenotype : null,
+      s.kind === "animal" ? s.race : null, s.gender?.toLowerCase(), `age ${s.age}`].filter(Boolean).join(", ");
+    let mini = s.kind === "animal"
+      ? [s.master ? `Master: ${esc(s.master)}` : "", (s.training || []).length ? `Trained: ${esc(s.training.join(", "))}` : ""].filter(Boolean).join("<br>")
+      : esc(topSkills(s));
+    if (p.status !== "present" && p.endDate) mini = `${p.status === "dead" ? "Died" : "Left"} ${esc(p.endDate)}${p.status === "dead" && p.endCause ? ` — ${esc(shortCause(p.endCause))}` : ""}<br>` + mini;
+    return `<div class="card" data-pawn="${esc(p.id)}"><h3>${esc(s.name)}${statusBadge(p)}</h3><div class="sub">${esc(sub)}</div><div class="mini">${mini}</div></div>`;
+  }
+
+  function renderRoster(kinds, memorial) {
+    let ps = [...D.pawns.values()].filter(p => memorial ? p.status !== "present" : (kinds.includes(p.latest.kind) && p.status === "present"));
+    const formerCount = memorial ? 0 : [...D.pawns.values()].filter(p => kinds.includes(p.latest.kind) && p.status !== "present").length;
+    if (state.q) ps = ps.filter(p => (p.latest.name || "").toLowerCase().includes(state.q.toLowerCase()) || (p.latest.race || "").toLowerCase().includes(state.q.toLowerCase()));
+    const sorters = {
+      name: (a, b) => (a.latest.name || "").localeCompare(b.latest.name || ""),
+      age: (a, b) => b.latest.age - a.latest.age,
+      joined: (a, b) => (a.snaps[0]?.tick ?? 0) - (b.snaps[0]?.tick ?? 0),
+    };
+    ps.sort(sorters[state.sort]);
+    const html = `<div class="toolbar"><input type="search" id="q" placeholder="Filter by name or race..." value="${esc(state.q)}">
+      <select id="sort"><option value="name">Sort: name</option><option value="age">Sort: age</option><option value="joined">Sort: first seen</option></select>
+      ${formerCount ? `<span class="c-muted">${formerCount} former members are in the Memorial tab.</span>` : ""}</div>`;
+    return html + (ps.length ? `<div class="grid">${ps.map(card).join("")}</div>` : `<div class="empty">No one here yet.</div>`);
+  }
+
+  function diffSnaps(a, b) {
+    const out = [];
+    const set = x => new Set(x || []);
+    const addRem = (field, gained, lost) => {
+      const A = set(a[field]), B = set(b[field]);
+      for (const x of B) if (!A.has(x)) out.push(`<span class="up">${gained}</span> ${esc(x)}`);
+      for (const x of A) if (!B.has(x)) out.push(`<span class="down">${lost}</span> ${esc(x)}`);
+    };
+    const sa = new Map((a.skills || []).map(s => [s.name, s])), sb = new Map((b.skills || []).map(s => [s.name, s]));
+    for (const [n, s] of sb) {
+      const o = sa.get(n);
+      if (!o) continue;
+      if (o.level !== s.level && o.level >= 0 && s.level >= 0)
+        out.push(`${esc(n)} <span class="${s.level > o.level ? "up" : "down"}">${o.level} → ${s.level}</span>`);
+      if (o.passion !== s.passion) out.push(`${esc(n)} passion: ${esc(o.passion)} → ${esc(s.passion)}`);
+    }
+    addRem("traits", "New trait:", "Lost trait:");
+    addRem("hediffs", "Health:", "Healed/removed:");
+    addRem("training", "Learned:", "Forgot:");
+    if (a.incapable && b.incapable) addRem("incapable", "Now incapable of:", "Can now do:");
+    if (!!a.relAll === !!b.relAll) {
+    const ra = new Set((a.relations || []).map(r => r.rel + "|" + r.id)), rb = (b.relations || []);
+    for (const r of rb) if (!ra.has(r.rel + "|" + r.id)) out.push(`<span class="up">New relation:</span> ${pawnLink(r.id, r.name)} (${esc(r.rel)})`);
+    const rbKeys = new Set(rb.map(r => r.rel + "|" + r.id));
+    for (const r of (a.relations || [])) if (!rbKeys.has(r.rel + "|" + r.id)) out.push(`<span class="down">Ended relation:</span> ${pawnLink(r.id, r.name)} (${esc(r.rel)})`);
+    }
+    const FIELDS = { kind: "Status", xenotype: "Xenotype", title: "Title", ideo: "Ideoligion", master: "Master", name: "Name" };
+    for (const [f, label] of Object.entries(FIELDS))
+      if ((a[f] ?? null) !== (b[f] ?? null) && (a[f] || b[f])) out.push(`${label}: ${esc(a[f] || "none")} → ${esc(b[f] || "none")}`);
+    if (b.age > a.age) out.push(`Turned ${b.age}`);
+    return out;
+  }
+
+  function renderPawn(id) {
+    const p = D.pawns.get(id);
+    if (!p) return `<div class="empty">Unknown pawn.</div>`;
+    const s = p.latest;
+    const facts = [
+      s.kind === "animal" ? s.race : (s.xenotype || null), s.gender?.toLowerCase(),
+      `age ${s.age}` + (s.ageChrono && s.ageChrono !== s.age ? ` (chronological ${s.ageChrono})` : ""),
+      s.faction ? `of ${s.faction}` : null,
+    ].filter(Boolean).join(", ");
+
+    let left = `<div class="box"><h3 style="margin:0">${esc(s.name)}${statusBadge(p)}</h3>
+      <div class="sub c-muted">${esc(facts)}</div>
+      ${s.childhood || s.adulthood ? `<div class="mini">${esc([s.childhood, s.adulthood].filter(Boolean).join(" → "))}</div>` : ""}
+      ${s.title ? `<div class="mini">Title: ${esc(s.title)}</div>` : ""}${s.ideo ? `<div class="mini">Ideoligion: <a class="ideo-link" data-ideo="${esc(s.ideoId ?? s.ideo)}">${esc(s.ideo)}</a>${s.certainty != null ? ` · certainty ${Math.round(s.certainty * 100)}%` : ""}${(s.prevIdeos || []).length ? `<br>Previously: ${esc(s.prevIdeos.join(", "))}` : ""}</div>` : ""}
+      ${s.master ? `<div class="mini">Master: ${esc(s.master)}</div>` : ""}
+      <div class="mini">First recorded ${esc(p.startDate || "?")}${p.endDate ? `<br>${p.status === "dead" ? "Died" : "Left"} ${esc(p.endDate)}${p.status === "dead" && p.endCause ? `<br>Cause: ${esc(p.endCause)}` : ""}` : ""}<br>Last seen: ${esc(s.location || "?")}</div>
+      ${s.health != null ? `<div class="mini">Health ${Math.round(s.health * 100)}%${s.mood != null ? ` · Mood ${Math.round(s.mood * 100)}%` : ""}</div>` : ""}
+    </div>`;
+    if ((s.traits || []).length) left += `<div class="box"><h4>Traits</h4><div class="tags">${s.traits.map(t => `<span>${esc(t)}</span>`).join("")}</div></div>`;
+    if ((s.skills || []).length) {
+      const start = new Map();
+      for (const snap of p.snaps) for (const k of (snap.pawn.skills || [])) if (k.level >= 0 && !start.has(k.name)) start.set(k.name, k.level);
+      const since = p.snaps[0]?.date;
+      left += `<div class="box"><h4>Skills <span style="text-transform:none;letter-spacing:0;font-weight:400">· start → now${since ? ` (since ${esc(since)})` : ""}</span></h4>${s.skills.map(k => {
+        const from = start.get(k.name), d = k.level >= 0 && from != null ? k.level - from : 0;
+        const fromHtml = k.level < 0 ? `<span class="down">incapable</span>` : `${from ?? k.level} → ${k.level}${d ? ` <span class="${d > 0 ? "up" : "down"}">${d > 0 ? "+" : ""}${d}</span>` : ""}`;
+        return `<div class="skill"><span>${esc(k.name)}${k.passion === "Major" ? " 🔥🔥" : k.passion === "Minor" ? " 🔥" : ""}</span>
+          <div class="bar"><i style="width:${k.level < 0 ? 0 : k.level * 5}%"></i></div><span class="c-muted">${k.level < 0 ? "" : k.level}</span><span class="from">${fromHtml}</span></div>`;
+      }).join("")}</div>`;
+    }
+    if ((s.training || []).length) left += `<div class="box"><h4>Training</h4><div class="tags">${s.training.map(t => `<span>${esc(t)}</span>`).join("")}</div></div>`;
+    if ((s.hediffs || []).length) left += `<div class="box"><h4>Health conditions</h4><div class="tags">${s.hediffs.map(t => `<span>${esc(t)}</span>`).join("")}</div></div>`;
+    if ((s.incapable || []).length) left += `<div class="box"><h4>Incapable of</h4><div class="tags">${s.incapable.map(t => `<span class="down">${esc(t)}</span>`).join("")}</div></div>`;
+    if ((s.relations || []).length) left += `<div class="box"><h4>Family, romance & bonds</h4>${sortRelations(s.relations).map(r => `<div class="chg">${esc(r.rel)}: ${pawnLink(r.id, r.name)}${r.dead ? ' <span class="c-muted">(dead)</span>' : ""}</div>`).join("")}</div>`;
+    left += opinionsBox(p);
+    if (s.records && Object.keys(s.records).length) left += `<div class="box"><h4>Records</h4><table class="rec">${Object.entries(s.records).map(([k, v]) =>
+      `<tr><td>${esc(k)}</td><td>${esc(Number.isInteger(v) ? v : (Math.round(v * 10) / 10) + (/time/i.test(k) ? " days" : ""))}</td></tr>`).join("")}</table></div>`;
+
+    const items = [];
+    for (const e of p.events) if (state.showRewound || !e.rewound)
+      items.push({ tick: e.tick, type: LIFE.has(e.cat) ? "life" : isCombatTale(e) ? "fights" : e.cat, find: [e.label, e.text, ...(e.names || [])], html: () => eventRow(e) });
+    for (let i = 1; i < p.snaps.length; i++) {
+      const ch = diffSnaps(p.snaps[i - 1].pawn, p.snaps[i].pawn);
+      if (ch.length) items.push({ tick: p.snaps[i].tick, type: "changes", find: ch.map(c => c.replace(/<[^>]+>/g, "")),
+        html: () => `<div class="ev"><div class="d">${esc(p.snaps[i].date)}</div><div class="c c-muted">changed</div><div>${ch.join("<br>")}</div></div>` });
+    }
+    const huntCount = p.battles.filter(b => isHunt(b, p.id)).length;
+    for (const b of p.battles) {
+      if (!state.showHunts && isHunt(b, p.id)) continue;
+      items.push({ tick: b.start.tick, type: "fights", find: [b.name, ...b.who.values(), ...linesFor(b, p.id).map(c => c.text)], html: () => fightRow(b, p.id) });
+    }
+    items.sort((a, b) => b.tick - a.tick);
+
+    const q = state.storyQ.toLowerCase();
+    const found = q ? items.filter(i => i.find.some(x => (x || "").toLowerCase().includes(q))) : items;
+    const counts = new Map();
+    for (const i of found) counts.set(i.type, (counts.get(i.type) || 0) + 1);
+    if (state.storyFilter !== "all" && !counts.has(state.storyFilter) && !items.some(i => i.type === state.storyFilter)) state.storyFilter = "all";
+    const shown = state.storyFilter === "all" ? found : found.filter(i => i.type === state.storyFilter);
+
+    const chips = STORY_TYPES.filter(([k]) => k === "all" || items.some(i => i.type === k) || (k === "fights" && huntCount))
+      .map(([k, l]) => `<button class="chip${state.storyFilter === k ? " on" : ""}" data-story="${k}">${l} <span class="c-muted">${k === "all" ? found.length : counts.get(k) || 0}</span></button>`).join("");
+    const huntToggle = huntCount ? `<label class="tog"><input type="checkbox" id="hunts" ${state.showHunts ? "checked" : ""}> Show ${huntCount} hunt${huntCount === 1 ? "" : "s"}</label>` : "";
+    const toolbar = `<div class="toolbar" style="margin-bottom:8px"><input type="search" id="sq" placeholder="Search ${esc(p.name || "this pawn")}'s story..." value="${esc(state.storyQ)}">${huntToggle}</div>
+      <div class="toolbar">${chips}</div>`;
+    const right = `<div class="box"><h4>Story</h4>${items.length > 1 ? toolbar : ""}${shown.length ? shown.map(i => i.html()).join("") : `<div class="empty">${items.length ? "Nothing matches." : "Nothing recorded yet."}</div>`}</div>`;
+    return `<button class="btn back" id="back">← Back</button><div class="bio"><div>${left}</div><div>${right}</div></div>`;
+  }
+
+  const ROMANCE = /^(spouse|husband|wife|fianc|lover|boyfriend|girlfriend)/i;
+  const REL_ORDER = [ROMANCE, /bond/i, /^(mother|father|parent)/i, /^(son|daughter|child)/i, /^(brother|sister|sibling)/i, /^(half)/i,
+    /^grand(mother|father|parent)/i, /^grand(son|daughter|child)/i, /^great/i, /^(uncle|aunt)/i, /^(nephew|niece)/i, /^cousin/i, /in-law/i, /^ex/i];
+
+  function sortRelations(list) {
+    const rank = r => { const i = REL_ORDER.findIndex(re => re.test(r.rel)); return i < 0 ? REL_ORDER.length : i; };
+    return list.slice().sort((a, b) => rank(a) - rank(b) || (a.dead ? 1 : 0) - (b.dead ? 1 : 0) || (a.name || "").localeCompare(b.name || ""));
+  }
+  const present = p => p && p.status === "present";
+
+  function opinionOf(from, toId) {
+    return (from?.latest?.opinions || []).find(o => o.id === toId)?.op;
+  }
+
+  function opRow(name, op, back) {
+    const w = Math.min(50, Math.abs(op) / 2);
+    const bar = op >= 0 ? `left:50%;width:${w}%;background:var(--good)` : `right:50%;width:${w}%;background:var(--bad)`;
+    return `<div class="op"><span>${name}${back != null ? ` <span class="c-muted" title="Their opinion of this pawn">(${back > 0 ? "+" : ""}${back})</span>` : ""}</span>
+      <div class="opbar"><i style="${bar}"></i></div><span class="${op >= 0 ? "up" : "down"}">${op > 0 ? "+" : ""}${op}</span></div>`;
+  }
+
+  function opinionsBox(p) {
+    const ops = (p.latest.opinions || []).filter(o => D.pawns.has(o.id) && present(D.pawns.get(o.id)));
+    if (!ops.length) return "";
+    ops.sort((a, b) => b.op - a.op);
+    const rows = ops.map(o => opRow(pawnLink(o.id, o.name), o.op, opinionOf(D.pawns.get(o.id), p.id)));
+    return `<div class="box"><h4>Opinions <span style="text-transform:none;letter-spacing:0;font-weight:400">· theirs in brackets</span></h4>${rows.join("")}</div>`;
+  }
+
+  function renderRelations() {
+    const ps = [...D.pawns.values()].filter(p => present(p) && p.latest.kind !== "mech");
+    const pairKey = (a, b, kind) => [a, b].sort().join("|") + "|" + kind;
+    const couples = new Map(), family = [], bonds = new Map(), familySeen = new Set(), outside = [];
+    for (const p of ps) for (const r of (p.latest.relations || [])) {
+      const other = D.pawns.get(r.id);
+      if (/^ex/i.test(r.rel)) continue;
+      if (/bond/i.test(r.rel)) {
+        if (present(other)) bonds.set(pairKey(p.id, r.id, "bond"), [p, other]);
+      } else if (ROMANCE.test(r.rel)) {
+        const kind = /^(spouse|husband|wife)/i.test(r.rel) ? "married" : /^fianc/i.test(r.rel) ? "engaged" : "lovers";
+        if (present(other)) couples.set(pairKey(p.id, r.id, "romance"), { a: p, b: other, rel: kind });
+      } else if (D.pawns.has(r.id)) {
+        if (familySeen.has(pairKey(p.id, r.id, "family"))) continue;
+        familySeen.add(pairKey(p.id, r.id, "family"));
+        family.push({ p, other, r });
+      } else {
+        outside.push({ p, r });
+      }
+    }
+
+    const humans = ps.filter(p => p.latest.kind !== "animal");
+    const ties = [];
+    for (let i = 0; i < humans.length; i++) for (let j = i + 1; j < humans.length; j++) {
+      const a = humans[i], b = humans[j];
+      const ab = opinionOf(a, b.id), ba = opinionOf(b, a.id);
+      if (ab == null && ba == null) continue;
+      ties.push({ a, b, ab: ab ?? 0, ba: ba ?? 0 });
+    }
+    const friends = ties.filter(t => t.ab >= 20 && t.ba >= 20).sort((x, y) => (y.ab + y.ba) - (x.ab + x.ba));
+    const rivals = ties.filter(t => t.ab <= -20 || t.ba <= -20).sort((x, y) => (x.ab + x.ba) - (y.ab + y.ba));
+
+    const hist = new Map();
+    for (const p of D.pawns.values()) for (let i = 1; i < p.snaps.length; i++) {
+      const a = p.snaps[i - 1].pawn, b = p.snaps[i].pawn;
+      if (!!a.relAll !== !!b.relAll) continue;
+      const A = new Map((a.relations || []).map(r => [r.rel + "|" + r.id, r])), B = new Map((b.relations || []).map(r => [r.rel + "|" + r.id, r]));
+      const add = (r, started) => {
+        const k = pairKey(p.id, r.id, r.rel.toLowerCase().replace(/husband|wife/, "spouse").replace(/boyfriend|girlfriend/, "lover") + started);
+        const once = pairKey(p.id, r.id, started + "@" + p.snaps[i].tick);
+        if (hist.has(k) || hist.has(once)) return;
+        hist.set(once, null);
+        const me = pawnLink(p.id, p.name), them = pawnLink(r.id, r.name), rel = esc(r.rel.toLowerCase());
+        const html = /bond/i.test(r.rel)
+          ? (started ? `${me} bonded with ${them}` : `${me}'s bond with ${them} ended`)
+          : (started ? `${them} became ${me}'s ${rel}` : `${them} is no longer ${me}'s ${rel}`);
+        hist.set(k, { tick: p.snaps[i].tick, date: p.snaps[i].date, html: `<span class="${started ? "up" : "down"}">${started ? "♥" : "✕"}</span> ${html}` });
+      };
+      for (const [k, r] of B) if (!A.has(k)) add(r, true);
+      for (const [k, r] of A) if (!B.has(k)) add(r, false);
+    }
+    const history = [...hist.values()].filter(Boolean).sort((x, y) => y.tick - x.tick);
+
+    const pairs = (list, fn, empty) => list.length ? list.map(fn).join("") : `<div class="c-muted">${empty}</div>`;
+    const tie = t => `<div class="pair">${pawnLink(t.a.id, t.a.name)} <span class="${t.ab >= 0 ? "up" : "down"}">${t.ab > 0 ? "+" : ""}${t.ab}</span> ⇄ <span class="${t.ba >= 0 ? "up" : "down"}">${t.ba > 0 ? "+" : ""}${t.ba}</span> ${pawnLink(t.b.id, t.b.name)}</div>`;
+    const noOps = !ties.length ? `<div class="c-muted" style="margin-bottom:8px">Opinions are recorded from this version on and will appear after the next snapshot.</div>` : "";
+
+    return `<div class="two">
+      <div>
+        <div class="box"><h4>Couples</h4>${pairs([...couples.values()], c => `<div class="pair">${pawnLink(c.a.id, c.a.name)} ♥ ${pawnLink(c.b.id, c.b.name)} <span class="c-muted">(${esc(c.rel)})</span></div>`, "No couples right now.")}</div>
+        <div class="box"><h4>Family</h4>${pairs(family, f => `<div class="pair">${pawnLink(f.r.id, f.r.name)} is ${pawnLink(f.p.id, f.p.name)}'s ${esc(f.r.rel.toLowerCase())}${f.r.dead ? ' <span class="c-muted">(dead)</span>' : ""}</div>`, "No family ties within the colony.")}
+          ${outside.length ? `<details style="margin-top:8px"><summary class="c-muted" style="cursor:pointer">${outside.length} relative${outside.length === 1 ? "" : "s"} outside the colony</summary>${ps.filter(p => outside.some(o => o.p === p)).map(p =>
+            `<div class="pair"><b>${pawnLink(p.id, p.name)}</b>: ${sortRelations(outside.filter(o => o.p === p).map(o => o.r)).map(r => `${esc(r.name)} <span class="c-muted">(${esc(r.rel.toLowerCase())}${r.dead ? ", dead" : ""})</span>`).join(", ")}</div>`).join("")}</details>` : ""}</div>
+        <div class="box"><h4>Animal bonds</h4>${pairs([...bonds.values()], ([a, b]) => `<div class="pair">${pawnLink(a.id, a.name)} ⇄ ${pawnLink(b.id, b.name)}</div>`, "No bonded animals.")}</div>
+      </div>
+      <div>
+        <div class="box"><h4>Friends <span style="text-transform:none;letter-spacing:0;font-weight:400">· both +20 or more</span></h4>${noOps}${pairs(friends, tie, ties.length ? "No close friendships." : "")}</div>
+        <div class="box"><h4>Rivals & tension <span style="text-transform:none;letter-spacing:0;font-weight:400">· either −20 or less</span></h4>${pairs(rivals, tie, ties.length ? "No rivalries." : "")}</div>
+        <div class="box"><h4>Relationship history</h4>${pairs(history.slice(0, 300), h => `<div class="chg"><span class="d">${esc(h.date)}</span>${h.html}</div>`, "Nothing has changed yet.")}</div>
+      </div></div>`;
+  }
+
+  function hasFaith() {
+    return D.ideos.size > 0 || [...D.pawns.values()].some(p => p.latest.ideo);
+  }
+
+  function renderBeliefs() {
+    const ideos = [...D.ideos.values()].sort((a, b) => (b.latest.primary ? 1 : 0) - (a.latest.primary ? 1 : 0));
+    const believers = i => [...D.pawns.values()].filter(p => present(p) && (p.latest.ideoId === i.id || (p.latest.ideoId == null && p.latest.ideo === i.latest.name)));
+    const faithEvents = D.events.filter(e => e.cat === "faith" && (state.showRewound || !e.rewound));
+
+    const card = i => {
+      const x = i.latest, fol = believers(i);
+      const names = new Set(i.snaps.map(s => s.ideo.name));
+      const evs = faithEvents.filter(e => [...names].some(n => (e.label || "").includes(n)));
+      return `<div class="box" id="ideo-${esc(x.id)}">
+        <h3 style="margin:0 0 2px">${esc(x.name)}${x.primary ? ' <span class="badge">primary</span>' : ""}</h3>
+        <div class="sub c-muted">${esc([x.culture, x.member ? `followers are called ${x.member}s` : null].filter(Boolean).join(" · "))}</div>
+        ${(x.memes || []).length ? `<h4 style="margin-top:12px">Memes</h4><div class="tags">${x.memes.map(m => `<span>${esc(m)}</span>`).join("")}</div>` : ""}
+        <h4 style="margin-top:12px">Followers in the colony (${fol.length})</h4>
+        <div class="tags">${fol.map(p => `<span>${pawnLink(p.id, p.name)}${p.latest.certainty != null ? ` <small class="c-muted">${Math.round(p.latest.certainty * 100)}%</small>` : ""}</span>`).join("") || '<span class="c-muted">None right now</span>'}</div>
+        ${(x.precepts || []).length ? `<details style="margin-top:12px"><summary class="c-muted" style="cursor:pointer">${x.precepts.length} precept${x.precepts.length === 1 ? "" : "s"}</summary><div class="tags" style="margin-top:6px">${x.precepts.map(m => `<span>${esc(m)}</span>`).join("")}</div></details>` : ""}
+        ${x.description ? `<details style="margin-top:8px"><summary class="c-muted" style="cursor:pointer">Description</summary><div class="t" style="margin-top:6px">${esc(x.description)}</div></details>` : ""}
+        ${evs.length ? `<h4 style="margin-top:12px">History</h4>${evs.slice().reverse().map(eventRow).join("")}` : ""}
+      </div>`;
+    };
+
+    const conversions = faithEvents.filter(e => e.sub === "converted").slice().reverse();
+    const empty = !ideos.length ? `<div class="box c-muted">Ideoligion details are recorded from this version on (Ideology DLC, non-classic mode). They'll appear after the game runs for a moment.</div>` : "";
+    return empty + ideos.map(card).join("")
+      + `<div class="box"><h4>Conversions</h4>${conversions.length ? conversions.map(eventRow).join("") : '<div class="c-muted">No one has converted yet.</div>'}</div>`;
+  }
+
+  function render() {
+    renderHeader();
+    const main = $("#main");
+    if (state.pawn) main.innerHTML = renderPawn(state.pawn);
+    else if (state.tab === "timeline") main.innerHTML = renderTimeline();
+    else if (state.tab === "colonist") main.innerHTML = renderRoster(["colonist"]);
+    else if (state.tab === "animal") main.innerHTML = renderRoster(["animal"]);
+    else if (state.tab === "other") main.innerHTML = renderRoster(["prisoner", "slave", "mech", "other"]);
+    else if (state.tab === "memorial") main.innerHTML = renderRoster([], true);
+    else if (state.tab === "relations") main.innerHTML = renderRelations();
+    else if (state.tab === "beliefs") main.innerHTML = renderBeliefs();
+    const sort = $("#sort"); if (sort) sort.value = state.sort;
+  }
+
+  function renderEmpty() {
+    $("#main").innerHTML = `<div id="drop">
+      <p><b>No chronicle data found next to this page.</b></p>
+      <p>Open this page from the in-game <i>Chronicle</i> tab (“Open viewer”), or drop a <code>chronicle-data.js</code> file here.</p>
+      <p><input type="file" id="file" accept=".js,.jsonl,.json,.txt"></p></div>`;
+  }
+
+  document.addEventListener("click", ev => {
+    const t = ev.target.closest("[data-tab],[data-filter],[data-story],[data-pawn],[data-ideo],#back,#reload");
+    if (!t) return;
+    if (t.dataset.ideo) {
+      state.tab = "beliefs"; state.pawn = null; render();
+      document.getElementById("ideo-" + t.dataset.ideo)?.scrollIntoView({ block: "start" });
+      return;
+    }
+    if (t.id === "reload") return reload();
+    if (t.id === "back") { state.pawn = null; history.back(); return; }
+    if (t.dataset.tab) { state.tab = t.dataset.tab; state.pawn = null; state.q = ""; }
+    if (t.dataset.filter) state.filter = t.dataset.filter;
+    if (t.dataset.story) state.storyFilter = t.dataset.story;
+    if (t.dataset.pawn) { if (t.dataset.pawn !== state.pawn) { state.storyFilter = "all"; state.storyQ = ""; } state.pawn = t.dataset.pawn; history.pushState({ pawn: state.pawn }, ""); window.scrollTo(0, 0); }
+    render();
+  });
+  document.addEventListener("toggle", ev => {
+    const d = ev.target;
+    if (!d.matches?.("details[data-battle]") || !d.open) return;
+    const lines = d.querySelector(".lines");
+    if (lines.innerHTML) return;
+    const b = D.battles.find(x => x.id === d.dataset.battle);
+    if (b) lines.innerHTML = battleLines(b, d.dataset.pov || null);
+  }, true);
+  window.addEventListener("popstate", e => { state.pawn = e.state?.pawn || null; render(); });
+  document.addEventListener("input", ev => {
+    if (ev.target.id === "q" || ev.target.id === "sq") {
+      const id = ev.target.id;
+      if (id === "q") state.q = ev.target.value; else state.storyQ = ev.target.value;
+      const pos = ev.target.selectionStart;
+      render();
+      const box = $("#" + id); box.focus(); box.setSelectionRange(pos, pos);
+    }
+  });
+  document.addEventListener("change", ev => {
+    if (ev.target.id === "hunts") { state.showHunts = ev.target.checked; render(); }
+    if (ev.target.id === "rew") { state.showRewound = ev.target.checked; render(); }
+    if (ev.target.id === "sort") { state.sort = ev.target.value; render(); }
+    if (ev.target.id === "file" && ev.target.files[0]) ev.target.files[0].text().then(loadText);
+  });
+  document.addEventListener("dragover", e => { e.preventDefault(); $("#drop")?.classList.add("hover"); });
+  document.addEventListener("dragleave", () => $("#drop")?.classList.remove("hover"));
+  document.addEventListener("drop", e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) f.text().then(loadText); });
+
+  function loadText(text) { load(parseFileText(text)); }
+  function load(records) {
+    if (!records.length) return renderEmpty();
+    D = process(records);
+    document.title = D.colony + " — Rimlore";
+    render();
+  }
+  function reload() {
+    window.__CHRONICLE = [];
+    const s = document.createElement("script");
+    s.src = "chronicle-data.js?t=" + Date.now();
+    s.onload = () => load(window.__CHRONICLE);
+    s.onerror = () => alert("Couldn't reload chronicle-data.js. Was the page opened from the chronicle folder?");
+    document.body.appendChild(s);
+  }
+
+  load(window.__CHRONICLE);
+})();
+</script>
+</body>
+</html>
