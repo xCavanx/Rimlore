@@ -102,6 +102,18 @@
   .cb svg { width: 20px; height: 20px; display: block; }
   .cn { color: var(--accent); }
   .box .cb:nth-child(even) { background: var(--panel2); }
+  .card.pc { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: start; }
+  .card .pt { width: 64px; height: 64px; object-fit: cover; object-position: 50% 30%; border-radius: 8px; background: var(--panel2); border: 1px solid var(--line); }
+  .ptbig { margin: -2px 0 10px; text-align: center; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; }
+  .ptbig img { display: block; margin: 0 auto; width: 200px; max-width: 100%; height: auto; }
+  .dead-pt .pt, .dead-pt img { filter: grayscale(1); opacity: .8; }
+  .faces { display: inline-flex; vertical-align: -6px; margin-right: 7px; }
+  .face { display: inline-block; width: 22px; height: 22px; border-radius: 50%; overflow: hidden; background: var(--panel2); border: 1.5px solid var(--bg); margin-left: -7px; cursor: pointer; position: relative; }
+  .face:first-child { margin-left: 0; }
+  .face img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+  .face.dead img { filter: grayscale(1); }
+  .faces .more { font-size: 11px; color: var(--muted); margin-left: 4px; align-self: center; }
+  .pair .faces, .chg .faces { margin-right: 5px; }
   table.rec td { padding: 2px 0; } table.rec td:last-child { text-align: right; color: var(--muted); }
 </style>
 </head>
@@ -125,7 +137,7 @@
   const esc = s => String(s ?? "").replace(/<\/?(color|b|i|size)(=[^>]*)?>/gi, "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const TICKS_PER_YEAR = 3600000;
 
-  const COMBAT_TALES = new Set(["Wounded", "Downed", "Hunted", "SocialFight", "DefeatedHostileFactionLeader", "CaravanAmbushedByHumanlike",
+  const COMBAT_TALES = new Set(["CombatGroup", "Wounded", "Downed", "Hunted", "SocialFight", "DefeatedHostileFactionLeader", "CaravanAmbushedByHumanlike",
     "CaravanAmbushDefeated", "CaravanAssaultSuccessful", "CaravanFled"]);
   const isCombatTale = e => e.cat === "tale" && (COMBAT_TALES.has(e.sub) || /^Killed/.test(e.sub || ""));
   const LIFE = new Set(["colony", "founded", "joined", "born", "tamed", "captured", "recruited", "died", "left", "status"]);
@@ -179,6 +191,8 @@
       merged.add(e);
     }
     if (merged.size) events.splice(0, events.length, ...events.filter(e => !merged.has(e)));
+    const battles = buildBattles(combat, battleRecs);
+    events.splice(0, events.length, ...foldCombatTales(events, battles, new Set(snaps.map(r => r.pawn.id))));
     snaps.sort((a, b) => a.tick - b.tick);
 
     const pawns = new Map();
@@ -220,12 +234,52 @@
       i.latest = r.ideo;
     }
 
-    const battles = buildBattles(combat, battleRecs);
     for (const b of battles) for (const id of b.pawns) pawns.get(id)?.battles.push(b);
 
     const lastSession = [...sessions].reverse().find(s => s.kind !== "renamed");
     const colony = [...sessions].reverse().find(s => s.colony)?.colony || "Colony";
     return { events, snaps, sessions, pawns, colony, lastSession, ideos, battles };
+  }
+
+  function foldCombatTales(events, battles, known) {
+    const inFight = e => battles.some(b => e.tick >= b.start.tick - 2500 && e.tick <= b.end.tick + 2500 && e.pawns.every(id => b.pawns.has(id)));
+    const open = new Map(), out = [];
+    for (const e of events) {
+      if (!isCombatTale(e) || !(e.pawns || []).length) { out.push(e); continue; }
+      if (!e.rewound && inFight(e)) continue;
+      const key = (e.rewound ? "r|" : "") + [...new Set(e.pawns)].sort().join("|");
+      const g = open.get(key);
+      if (g && e.tick - g.last <= 60000) { g.items.push(e); g.last = e.tick; continue; }
+      const group = { items: [e], last: e.tick };
+      open.set(key, group);
+      out.push(group);
+    }
+    return out.map(x => !x.items ? x : x.items.length === 1 ? x.items[0] : combatGroup(x.items, known));
+  }
+
+  function combatGroup(items, known) {
+    const who = new Map();
+    for (const e of items) (e.pawns || []).forEach((id, i) => { if (!who.has(id)) who.set(id, e.names?.[i] || "someone"); });
+    const ids = [...who.keys()].sort((a, b) => (known.has(b) ? 1 : 0) - (known.has(a) ? 1 : 0));
+    const names = ids.map(id => who.get(id));
+    const shown = names.map((n, i) => known.has(ids[i]) || !/^[a-z]/.test(n) ? n : (/^[aeiou]/.test(n) ? "an " : "a ") + n);
+    const KIND = { Wounded: "wounded", Downed: "downed", SocialFight: "social fight", Hunted: "hunted" };
+    const counts = new Map(), lines = new Map(), kills = new Set();
+    for (const e of items) {
+      const kind = /^Killed/.test(e.sub) ? "killed" : KIND[e.sub] || "fought";
+      if (kind === "killed") { if (kills.has(e.label)) continue; kills.add(e.label); }
+      counts.set(kind, (counts.get(kind) || 0) + 1);
+      lines.set(e.label, (lines.get(e.label) || 0) + 1);
+    }
+    const order = ["social fight", "fought", "wounded", "downed", "hunted", "killed"];
+    const summary = order.filter(k => counts.has(k)).map(k => counts.get(k) > 1 ? `${k} ×${counts.get(k)}` : k).join(" · ");
+    const first = items[0], last = items[items.length - 1];
+    return {
+      t: "event", cat: "tale", sub: "CombatGroup", tick: first.tick, date: first.date, rewound: first.rewound,
+      label: `${shown.join(" vs ")} — ${summary}`,
+      text: [...lines].map(([l, n]) => n > 1 ? `${l} (×${n})` : l).join("\n") + (last.date !== first.date ? `\n\nUntil ${last.date}` : ""),
+      pawns: ids, names,
+    };
   }
 
   function buildBattles(combat, battleRecs) {
@@ -328,12 +382,12 @@
     return html;
   }
 
-  function eventRow(e) {
+  function eventRow(e, exclude) {
     const hasText = e.text && e.text !== e.label;
     const seen = new Set();
     const missing = (e.pawns || []).map((id, i) => [id, e.names?.[i]])
       .filter(([id, n]) => n && !(e.label || "").includes(n) && !seen.has(n) && seen.add(n));
-    const label = linkNames(e) + (missing.length
+    const label = faces(e.pawns, exclude) + linkNames(e) + (missing.length
       ? ` <span class="who">— ${missing.map(([id, n]) => pawnLink(id, n)).join(", ")}</span>` : "");
     const inner = hasText
       ? `<details><summary class="l">${label}</summary><div class="t">${esc(e.text)}</div></details>`
@@ -434,7 +488,7 @@
   function fightRow(b, pov) {
     const when = b.start.date === b.end.date ? "" : ` title="Until ${esc(b.end.date)}"`;
     return `<div class="ev"><div class="d"${when}>${esc(b.start.date)}</div><div class="c c-fight">${pov && isHunt(b, pov) ? "hunt" : "fight"}</div>
-      <details data-battle="${esc(b.id)}"${pov ? ` data-pov="${esc(pov)}"` : ""}><summary class="l">${nameLinks(b.name, b.who)} <span class="who">— ${nameLinks(fightSummary(b, pov), b.who)}</span></summary><div class="lines"></div></details></div>`;
+      <details data-battle="${esc(b.id)}"${pov ? ` data-pov="${esc(pov)}"` : ""}><summary class="l">${faces([...b.pawns], pov)}${nameLinks(b.name, b.who)} <span class="who">— ${nameLinks(fightSummary(b, pov), b.who)}</span></summary><div class="lines"></div></details></div>`;
   }
 
   function renderHeader() {
@@ -497,6 +551,22 @@
     return c.length > 70 ? c.slice(0, 67) + "…" : c;
   }
 
+  const PORTRAIT_KINDS = new Set(["colonist", "prisoner", "slave"]);
+  const hasPortrait = p => PORTRAIT_KINDS.has(p.latest.kind);
+  const portraitSrc = (p, face) => `portraits/${encodeURIComponent(p.id)}${face ? "-face" : ""}.png?v=${D.stamp}`;
+
+  function faces(ids, exclude) {
+    const list = [...new Set(ids || [])].filter(id => id !== exclude && D.pawns.has(id) && hasPortrait(D.pawns.get(id)));
+    if (!list.length) return "";
+    const shown = list.slice(0, 3).map(id => {
+      const p = D.pawns.get(id);
+      return `<span class="face${p.status === "dead" ? " dead" : ""}" data-pawn="${esc(id)}" title="${esc(p.latest.name || p.name)}"><img src="${portraitSrc(p, true)}" alt="" loading="lazy" onerror="this.parentNode.remove()"></span>`;
+    });
+    return `<span class="faces">${shown.join("")}${list.length > 3 ? `<span class="more">+${list.length - 3}</span>` : ""}</span>`;
+  }
+
+  const facedLink = (id, name) => faces([id]) + pawnLink(id, name);
+
   function statusBadge(p) {
     if (p.status === "dead") return `<span class="badge dead">died</span>`;
     if (p.status === "gone") return `<span class="badge gone">left</span>`;
@@ -511,7 +581,9 @@
       ? [s.master ? `Master: ${esc(s.master)}` : "", (s.training || []).length ? `Trained: ${esc(s.training.join(", "))}` : ""].filter(Boolean).join("<br>")
       : esc(topSkills(s));
     if (p.status !== "present" && p.endDate) mini = `${p.status === "dead" ? "Died" : "Left"} ${esc(p.endDate)}${p.status === "dead" && p.endCause ? ` — ${esc(shortCause(p.endCause))}` : ""}<br>` + mini;
-    return `<div class="card" data-pawn="${esc(p.id)}"><h3>${esc(s.name)}${statusBadge(p)}</h3><div class="sub">${esc(sub)}</div><div class="mini">${mini}</div></div>`;
+    const body = `<h3>${esc(s.name)}${statusBadge(p)}</h3><div class="sub">${esc(sub)}</div><div class="mini">${mini}</div>`;
+    if (!hasPortrait(p)) return `<div class="card" data-pawn="${esc(p.id)}">${body}</div>`;
+    return `<div class="card pc${p.status === "dead" ? " dead-pt" : ""}" data-pawn="${esc(p.id)}"><img class="pt" src="${portraitSrc(p, true)}" alt="" loading="lazy" onerror="this.parentNode.classList.remove('pc');this.remove()"><div>${body}</div></div>`;
   }
 
   function renderRoster(kinds, memorial) {
@@ -573,7 +645,8 @@
       s.faction ? `of ${s.faction}` : null,
     ].filter(Boolean).join(", ");
 
-    let left = `<div class="box"><h3 style="margin:0">${esc(s.name)}${statusBadge(p)}</h3>
+    const portrait = hasPortrait(p) ? `<div class="ptbig${p.status === "dead" ? " dead-pt" : ""}"><img src="${portraitSrc(p)}" alt="Portrait of ${esc(s.name)}" onerror="this.parentNode.remove()"></div>` : "";
+    let left = `<div class="box">${portrait}<h3 style="margin:0">${esc(s.name)}${statusBadge(p)}</h3>
       <div class="sub c-muted">${esc(facts)}</div>
       ${s.childhood || s.adulthood ? `<div class="mini">${esc([s.childhood, s.adulthood].filter(Boolean).join(" → "))}</div>` : ""}
       ${s.title ? `<div class="mini">Title: ${esc(s.title)}</div>` : ""}${s.ideo ? `<div class="mini">Ideoligion: <a class="ideo-link" data-ideo="${esc(s.ideoId ?? s.ideo)}">${esc(s.ideo)}</a>${s.certainty != null ? ` · certainty ${Math.round(s.certainty * 100)}%` : ""}${(s.prevIdeos || []).length ? `<br>Previously: ${esc(s.prevIdeos.join(", "))}` : ""}</div>` : ""}
@@ -603,7 +676,7 @@
 
     const items = [];
     for (const e of p.events) if (state.showRewound || !e.rewound)
-      items.push({ tick: e.tick, type: LIFE.has(e.cat) ? "life" : isCombatTale(e) ? "fights" : e.cat, find: [e.label, e.text, ...(e.names || [])], html: () => eventRow(e) });
+      items.push({ tick: e.tick, type: LIFE.has(e.cat) ? "life" : isCombatTale(e) ? "fights" : e.cat, find: [e.label, e.text, ...(e.names || [])], html: () => eventRow(e, p.id) });
     for (let i = 1; i < p.snaps.length; i++) {
       const ch = diffSnaps(p.snaps[i - 1].pawn, p.snaps[i].pawn);
       if (ch.length) items.push({ tick: p.snaps[i].tick, type: "changes", find: ch.map(c => c.replace(/<[^>]+>/g, "")),
@@ -715,16 +788,16 @@
     const history = [...hist.values()].filter(Boolean).sort((x, y) => y.tick - x.tick);
 
     const pairs = (list, fn, empty) => list.length ? list.map(fn).join("") : `<div class="c-muted">${empty}</div>`;
-    const tie = t => `<div class="pair">${pawnLink(t.a.id, t.a.name)} <span class="${t.ab >= 0 ? "up" : "down"}">${t.ab > 0 ? "+" : ""}${t.ab}</span> ⇄ <span class="${t.ba >= 0 ? "up" : "down"}">${t.ba > 0 ? "+" : ""}${t.ba}</span> ${pawnLink(t.b.id, t.b.name)}</div>`;
+    const tie = t => `<div class="pair">${facedLink(t.a.id, t.a.name)} <span class="${t.ab >= 0 ? "up" : "down"}">${t.ab > 0 ? "+" : ""}${t.ab}</span> ⇄ <span class="${t.ba >= 0 ? "up" : "down"}">${t.ba > 0 ? "+" : ""}${t.ba}</span> ${facedLink(t.b.id, t.b.name)}</div>`;
     const noOps = !ties.length ? `<div class="c-muted" style="margin-bottom:8px">Opinions are recorded from this version on and will appear after the next snapshot.</div>` : "";
 
     return `<div class="two">
       <div>
-        <div class="box"><h4>Couples</h4>${pairs([...couples.values()], c => `<div class="pair">${pawnLink(c.a.id, c.a.name)} ♥ ${pawnLink(c.b.id, c.b.name)} <span class="c-muted">(${esc(c.rel)})</span></div>`, "No couples right now.")}</div>
-        <div class="box"><h4>Family</h4>${pairs(family, f => `<div class="pair">${pawnLink(f.r.id, f.r.name)} is ${pawnLink(f.p.id, f.p.name)}'s ${esc(f.r.rel.toLowerCase())}${f.r.dead ? ' <span class="c-muted">(dead)</span>' : ""}</div>`, "No family ties within the colony.")}
+        <div class="box"><h4>Couples</h4>${pairs([...couples.values()], c => `<div class="pair">${facedLink(c.a.id, c.a.name)} ♥ ${facedLink(c.b.id, c.b.name)} <span class="c-muted">(${esc(c.rel)})</span></div>`, "No couples right now.")}</div>
+        <div class="box"><h4>Family</h4>${pairs(family, f => `<div class="pair">${facedLink(f.r.id, f.r.name)} is ${facedLink(f.p.id, f.p.name)}'s ${esc(f.r.rel.toLowerCase())}${f.r.dead ? ' <span class="c-muted">(dead)</span>' : ""}</div>`, "No family ties within the colony.")}
           ${outside.length ? `<details style="margin-top:8px"><summary class="c-muted" style="cursor:pointer">${outside.length} relative${outside.length === 1 ? "" : "s"} outside the colony</summary>${ps.filter(p => outside.some(o => o.p === p)).map(p =>
             `<div class="pair"><b>${pawnLink(p.id, p.name)}</b>: ${sortRelations(outside.filter(o => o.p === p).map(o => o.r)).map(r => `${esc(r.name)} <span class="c-muted">(${esc(r.rel.toLowerCase())}${r.dead ? ", dead" : ""})</span>`).join(", ")}</div>`).join("")}</details>` : ""}</div>
-        <div class="box"><h4>Animal bonds</h4>${pairs([...bonds.values()], ([a, b]) => `<div class="pair">${pawnLink(a.id, a.name)} ⇄ ${pawnLink(b.id, b.name)}</div>`, "No bonded animals.")}</div>
+        <div class="box"><h4>Animal bonds</h4>${pairs([...bonds.values()], ([a, b]) => `<div class="pair">${facedLink(a.id, a.name)} ⇄ ${facedLink(b.id, b.name)}</div>`, "No bonded animals.")}</div>
       </div>
       <div>
         <div class="box"><h4>Friends <span style="text-transform:none;letter-spacing:0;font-weight:400">· both +20 or more</span></h4>${noOps}${pairs(friends, tie, ties.length ? "No close friendships." : "")}</div>
@@ -754,14 +827,14 @@
         <div class="tags">${fol.map(p => `<span>${pawnLink(p.id, p.name)}${p.latest.certainty != null ? ` <small class="c-muted">${Math.round(p.latest.certainty * 100)}%</small>` : ""}</span>`).join("") || '<span class="c-muted">None right now</span>'}</div>
         ${(x.precepts || []).length ? `<details style="margin-top:12px"><summary class="c-muted" style="cursor:pointer">${x.precepts.length} precept${x.precepts.length === 1 ? "" : "s"}</summary><div class="tags" style="margin-top:6px">${x.precepts.map(m => `<span>${esc(m)}</span>`).join("")}</div></details>` : ""}
         ${x.description ? `<details style="margin-top:8px"><summary class="c-muted" style="cursor:pointer">Description</summary><div class="t" style="margin-top:6px">${esc(x.description)}</div></details>` : ""}
-        ${evs.length ? `<h4 style="margin-top:12px">History</h4>${evs.slice().reverse().map(eventRow).join("")}` : ""}
+        ${evs.length ? `<h4 style="margin-top:12px">History</h4>${evs.slice().reverse().map(e => eventRow(e)).join("")}` : ""}
       </div>`;
     };
 
     const conversions = faithEvents.filter(e => e.sub === "converted").slice().reverse();
     const empty = !ideos.length ? `<div class="box c-muted">Ideoligion details are recorded from this version on (Ideology DLC, non-classic mode). They'll appear after the game runs for a moment.</div>` : "";
     return empty + ideos.map(card).join("")
-      + `<div class="box"><h4>Conversions</h4>${conversions.length ? conversions.map(eventRow).join("") : '<div class="c-muted">No one has converted yet.</div>'}</div>`;
+      + `<div class="box"><h4>Conversions</h4>${conversions.length ? conversions.map(e => eventRow(e)).join("") : '<div class="c-muted">No one has converted yet.</div>'}</div>`;
   }
 
   function render() {
@@ -833,6 +906,7 @@
   function load(records) {
     if (!records.length) return renderEmpty();
     D = process(records);
+    D.stamp = Date.now();
     document.title = D.colony + " — Rimlore";
     render();
   }

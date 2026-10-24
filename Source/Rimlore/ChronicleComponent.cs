@@ -39,6 +39,7 @@ namespace ColonyChronicle
         private int primaryIdeoId = -1;
         private readonly Dictionary<string, ChronicleEntry> pendingDeaths = new Dictionary<string, ChronicleEntry>();
         private readonly CombatLog combatLog = new CombatLog();
+        private readonly Portraits portraits = new Portraits();
 
         private static readonly HashSet<string> IgnoredMessageTypes = new HashSet<string> { "RejectInput", "SilentInput", "CautionInput" };
 
@@ -198,6 +199,7 @@ namespace ColonyChronicle
             if (full) Snapshot(now, full: true);
             else if (now - lastSnapshotTick >= interval) Snapshot(now, full: false);
             if (full || now % GenDate.TicksPerHour == 0) PollIdeos(now, force: full);
+            if (ChronicleMod.Settings.savePortraits) portraits.Poll(tracked.Values.Where(BelongsToColony), writer.Folder, now);
 
             writer.Flush();
         }

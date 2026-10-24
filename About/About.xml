@@ -4,7 +4,7 @@
   <author>Cavan</author>
   <packageId>cavan.rimlore</packageId>
   <url>https://github.com/xCavanx/Rimlore</url>
-  <modVersion>0.0.3</modVersion>
+  <modVersion>0.0.4</modVersion>
   <supportedVersions>
     <li>1.6</li>
     <li>1.7</li>
