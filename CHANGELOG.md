@@ -2,6 +2,14 @@
 
 The version shown in RimWorld's mod list comes from `<modVersion>` in `About/About.xml`.
 
+## 0.0.4
+
++ Pawn portraits in the viewer for colonists, prisoners and slaves, on their cards and pawn pages. Refreshed about once a day, and pawns who die or leave keep their last one. Can be turned off in the mod settings.
++ Mini portraits of the pawns involved in each event on the timeline, in fights and in the Relationships tab. Click a face to open that pawn. A pawn's own story only shows the other pawns.
+* Fight tales no longer spam the timeline. Ones already covered by a recorded fight are groups together.
++ Mini faces and card thumbnails use the same head-and-shoulders framing as the game's colonist bar.
+* Fixed the combat log setting's tooltip, which still mentioned the old Combat tab I had implemented early on.
+
 ## 0.0.3
 
 + Combat logs redesigned to better categorise and showcase the events.

@@ -11,6 +11,7 @@ namespace ColonyChronicle
         public bool recordMessages = true;
         public bool recordTales = true;
         public bool recordCombat = true;
+        public bool savePortraits = true;
 
         public override void ExposeData()
         {
@@ -19,6 +20,7 @@ namespace ColonyChronicle
             Scribe_Values.Look(ref recordMessages, "recordMessages", true);
             Scribe_Values.Look(ref recordTales, "recordTales", true);
             Scribe_Values.Look(ref recordCombat, "recordCombat", true);
+            Scribe_Values.Look(ref savePortraits, "savePortraits", true);
         }
     }
 
@@ -73,7 +75,9 @@ namespace ColonyChronicle
             list.CheckboxLabeled("Record messages (the small top-left notices)", ref Settings.recordMessages);
             list.CheckboxLabeled("Record tales (the events art is made about)", ref Settings.recordTales);
             list.CheckboxLabeled("Record combat logs (every hit, miss and downing your pawns are part of)", ref Settings.recordCombat,
-                "Shown in the viewer's Combat tab and on each pawn's page, like the game's own Log tab, but kept forever.");
+                "Shown in each pawn's story and the timeline's Fights filter in the viewer, like the game's own Log tab, but kept forever.");
+            list.CheckboxLabeled("Save pawn portraits for the viewer (colonists, prisoners and slaves)", ref Settings.savePortraits,
+                "A picture of each pawn is saved next to your history and refreshed about once a day, so their look in the viewer keeps up with new clothes and hair. Pawns who die or leave keep their last portrait.");
 
             list.Gap();
             list.Label("Rimlore files are kept in: " + ChronicleWriter.BaseFolder);
