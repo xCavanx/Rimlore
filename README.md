@@ -64,7 +64,9 @@ A few things are worth knowing:
 
 ![The timeline in the viewer](docs/Timeline.png)
 
-![A colonist's page in the viewer](docs/Colonist.png)
+![A colonist's page in the viewer](docs/Pawn_Portrait.png)
+
+![The Memorial tab in the viewer](docs/Memorial.png)
 
 ![The Beliefs tab in the viewer](docs/Beliefs.png)
 
