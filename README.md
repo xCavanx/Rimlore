@@ -112,7 +112,7 @@ You'll need the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 Rimlore is free and open-source software licensed under the [GNU General Public License v3.0](LICENSE).
 You are free to use, modify, fork and share Rimlore. Any derivative versions you distribute must also be licensed under GPLv3, with their source code made available under the same terms.
 
-I believe open-source software benefits everyone, and I wish more developers / companies embraced it. I encourage anyone interested in Rimlore to experiment with new ideas and to add their own personal touch.
+I believe open-source software benefits everyone, and I wish more developers and companies embraced it. I encourage anyone interested in Rimlore to experiment with new ideas and to add their own personal touch.
 
 At its heart, Rimlore is about creativity, enjoyment and learning. I hope this project gives you something to build upon, learn from and share with others or to just sit back and enjoy using.
 
