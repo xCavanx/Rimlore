@@ -40,6 +40,7 @@ namespace ColonyChronicle
         private readonly Dictionary<string, ChronicleEntry> pendingDeaths = new Dictionary<string, ChronicleEntry>();
         private readonly CombatLog combatLog = new CombatLog();
         private readonly Portraits portraits = new Portraits();
+        private readonly Dictionary<string, string> healthSignature = new Dictionary<string, string>();
 
         private static readonly HashSet<string> IgnoredMessageTypes = new HashSet<string> { "RejectInput", "SilentInput", "CautionInput" };
 
@@ -180,6 +181,7 @@ namespace ColonyChronicle
             PollCombat(now);
 
             Snapshot(now, full: true);
+            PollHealth(now);
             PollIdeos(now, force: true);
             writer.Flush();
         }
@@ -199,6 +201,7 @@ namespace ColonyChronicle
             if (full) Snapshot(now, full: true);
             else if (now - lastSnapshotTick >= interval) Snapshot(now, full: false);
             if (full || now % GenDate.TicksPerHour == 0) PollIdeos(now, force: full);
+            if (now % (3 * GenDate.TicksPerHour) == 0) PollHealth(now);
             if (ChronicleMod.Settings.savePortraits) portraits.Poll(tracked.Values.Where(BelongsToColony), writer.Folder, now);
 
             writer.Flush();
@@ -410,6 +413,7 @@ namespace ColonyChronicle
                         : weapon != null ? $"killed by {weapon}"
                         : null;
             pendingDeaths[p.ThingID] = entry;
+            WriteHealth(p, now, force: true);
         }
 
         private void CommitPendingDeaths(int now)
@@ -516,6 +520,36 @@ namespace ColonyChronicle
             catch (Exception e)
             {
                 Log.WarningOnce($"[Rimlore] Couldn't snapshot {p}: {e.Message}", p.thingIDNumber ^ 0x43C4A3);
+            }
+        }
+
+        private void PollHealth(int now)
+        {
+            foreach (Pawn p in tracked.Values)
+                if (BelongsToColony(p)) WriteHealth(p, now, force: false);
+        }
+
+        private void WriteHealth(Pawn p, int now, bool force)
+        {
+            try
+            {
+                if (p.health?.hediffSet == null) return;
+                string sig = Json.Serialize(HealthSnapshot.Of(p, 0.05f));
+                if (!force && healthSignature.TryGetValue(p.ThingID, out string prev) && prev == sig) return;
+                healthSignature[p.ThingID] = sig;
+                writer.Write(new Dictionary<string, object>
+                {
+                    ["t"] = "health",
+                    ["tick"] = now,
+                    ["date"] = Dates.At(now),
+                    ["pawn"] = p.ThingID,
+                    ["dead"] = p.Dead,
+                    ["health"] = HealthSnapshot.Of(p, 0.01f),
+                });
+            }
+            catch (Exception e)
+            {
+                Log.WarningOnce($"[Rimlore] Couldn't record the health of {p}: {e.Message}", p.thingIDNumber ^ 0x43C4A4);
             }
         }
 

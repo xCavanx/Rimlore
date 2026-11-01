@@ -2,13 +2,20 @@
 
 The version shown in RimWorld's mod list comes from `<modVersion>` in `About/About.xml`.
 
+## 0.0.5
+
++ Health tab on every pawn page showing overall health, pain, bleeding, capacities like Moving and Consciousness, and every current condition grouped into diseases (with severity and immunity), injuries, missing parts, scars, chronic conditions, addictions and implants.
++ The Health tab also shows a body diagram coloured by damage. Next to it is every damaged body part with its hit points and what's wrong with it.
++ Health history such as when each pawn was injured, fell ill, recovered, lost a part or had an implant installed.
++ Health at death is saved for Pawns in the Memorial, showing their wounds and condition when they died.
+
 ## 0.0.4
 
 + Pawn portraits in the viewer for colonists, prisoners and slaves, on their cards and pawn pages. Refreshed about once a day, and pawns who die or leave keep their last one. Can be turned off in the mod settings.
 + Mini portraits of the pawns involved in each event on the timeline, in fights and in the Relationships tab. Click a face to open that pawn. A pawn's own story only shows the other pawns.
-+ Mini faces and card thumbnails use the same head-and-shoulders framing as the game's colonist bar.
-* Fight tales no longer spam the timeline. Ones already covered by a recorded fight are groups together.
-* Fixed the combat log setting's tooltip, which still mentioned the old Combat tab I had implemented early on.
+* Fight tales no longer flood the timeline: ones already covered by a recorded fight are folded into it, and the rest are grouped into one row per skirmish ("Annie vs a boar — wounded ×9 · downed · killed") that opens into the details.
+* Mini faces and card thumbnails use the same head-and-shoulders framing as the game's colonist bar.
+* Fixed the combat log setting's tooltip, which still mentioned the old Combat tab.
 
 ## 0.0.3
 

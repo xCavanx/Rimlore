@@ -114,6 +114,41 @@
   .face.dead img { filter: grayscale(1); }
   .faces .more { font-size: 11px; color: var(--muted); margin-left: 4px; align-self: center; }
   .pair .faces, .chg .faces { margin-right: 5px; }
+  .ptabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .cap { display: grid; grid-template-columns: 130px 1fr 68px; gap: 8px; align-items: center; font-size: 13px; margin: 3px 0; }
+  .cap .v { text-align: right; }
+  .hc { display: grid; grid-template-columns: 130px 1fr; gap: 4px 8px; padding: 5px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .hc:last-child { border-bottom: 0; }
+  .hc .hp { color: var(--muted); }
+  .hc .dz { grid-column: 2; display: grid; grid-template-columns: 64px 1fr 40px; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+  .hgroup { margin: 12px 0 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .hgroup:first-child { margin-top: 0; }
+  .hb { font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--muted); white-space: nowrap; }
+  .hb.bad { color: var(--bad); border-color: var(--bad); }
+  .hb.warn { color: var(--warn); border-color: var(--warn); }
+  .warnc { color: var(--warn); }
+  @media (max-width: 860px) { .cap { grid-template-columns: 100px 1fr 64px; } .hc { grid-template-columns: 100px 1fr; } }
+  .body { display: grid; grid-template-columns: 210px 1fr; gap: 20px; align-items: start; }
+  .figwrap { background: #1b1e21; border: 1px solid #2c3035; border-radius: 10px; padding: 12px 10px 8px; }
+  .figwrap svg { width: 100%; height: auto; display: block; }
+  .figwrap .icons { margin-top: 6px; }
+  .fig path, .fig rect, .fig ellipse { fill: #e6e6e6; stroke: #0b0d0e; stroke-width: 3; stroke-linejoin: round; }
+  .icons path, .icons rect, .icons ellipse { stroke-width: 1.4; }
+  .fig .s1 { fill: #f0c75e; } .fig .s2 { fill: #e8873a; } .fig .s3 { fill: #d9483b; } .fig .impl { fill: #8db4f2; }
+  .fig .gone { fill: rgba(255,255,255,.04); stroke: #8a8f94; stroke-dasharray: 5 4; }
+  .icons .gone { stroke-dasharray: 2.5 2; }
+  .fig text { fill: #8a8f94; font-size: 13px; text-anchor: middle; stroke: none; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: #b9bdc1; margin-top: 10px; justify-content: center; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; border: 1px solid var(--line); }
+  .bp { padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .bp:last-child { border-bottom: 0; }
+  .bp .top { display: grid; grid-template-columns: 1fr 120px 64px; gap: 8px; align-items: center; }
+  .bp .hpv { text-align: right; color: var(--muted); font-size: 12px; }
+  .bp .on { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  @media (max-width: 860px) { .body { grid-template-columns: 1fr; } }
+  .hh { display: grid; grid-template-columns: 150px 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .hh:last-child { border-bottom: 0; }
+  .hh .d { color: var(--muted); font-size: 12px; }
   table.rec td { padding: 2px 0; } table.rec td:last-child { text-align: right; color: var(--muted); }
 </style>
 </head>
@@ -150,7 +185,7 @@
     ["letter", "Letters"], ["tale", "Tales"], ["message", "Messages"], ["note", "Notes"]];
 
   let D = null;
-  const state = { tab: "timeline", filter: "all", q: "", showRewound: false, pawn: null, sort: "name", showHunts: false, storyFilter: "all", storyQ: "" };
+  const state = { tab: "timeline", filter: "all", q: "", showRewound: false, pawn: null, sort: "name", showHunts: false, storyFilter: "all", storyQ: "", pawnTab: "story" };
 
   function parseFileText(text) {
     const out = [];
@@ -164,7 +199,7 @@
   }
 
   function process(records) {
-    const events = [], snaps = [], sessions = [], ideoSnaps = [], combat = [], battleRecs = [];
+    const events = [], snaps = [], sessions = [], ideoSnaps = [], combat = [], battleRecs = [], healthRecs = [];
     const all = [];
     for (const r of records) {
       if (r.t === "session" && (r.kind === "loaded" || r.kind === "attached")) {
@@ -177,6 +212,7 @@
       else if (r.t === "ideo") ideoSnaps.push(r);
       else if (r.t === "combat") combat.push(r);
       else if (r.t === "battle") battleRecs.push(r);
+      else if (r.t === "health") healthRecs.push(r);
     }
 
     events.sort((a, b) => a.tick - b.tick);
@@ -197,7 +233,7 @@
 
     const pawns = new Map();
     const getP = id => {
-      if (!pawns.has(id)) pawns.set(id, { id, snaps: [], events: [], battles: [], status: "present", name: null });
+      if (!pawns.has(id)) pawns.set(id, { id, snaps: [], events: [], battles: [], health: [], status: "present", name: null });
       return pawns.get(id);
     };
     for (const s of snaps) {
@@ -235,6 +271,8 @@
     }
 
     for (const b of battles) for (const id of b.pawns) pawns.get(id)?.battles.push(b);
+    healthRecs.sort((a, b) => a.tick - b.tick);
+    for (const r of healthRecs) if (!r.rewound && r.health) pawns.get(r.pawn)?.health.push(r);
 
     const lastSession = [...sessions].reverse().find(s => s.kind !== "renamed");
     const colony = [...sessions].reverse().find(s => s.colony)?.colony || "Colony";
@@ -667,12 +705,15 @@
       }).join("")}</div>`;
     }
     if ((s.training || []).length) left += `<div class="box"><h4>Training</h4><div class="tags">${s.training.map(t => `<span>${esc(t)}</span>`).join("")}</div></div>`;
-    if ((s.hediffs || []).length) left += `<div class="box"><h4>Health conditions</h4><div class="tags">${s.hediffs.map(t => `<span>${esc(t)}</span>`).join("")}</div></div>`;
+    if ((s.hediffs || []).length && !p.health.length) left += `<div class="box"><h4>Health conditions</h4><div class="tags">${s.hediffs.map(t => `<span>${esc(t)}</span>`).join("")}</div></div>`;
     if ((s.incapable || []).length) left += `<div class="box"><h4>Incapable of</h4><div class="tags">${s.incapable.map(t => `<span class="down">${esc(t)}</span>`).join("")}</div></div>`;
     if ((s.relations || []).length) left += `<div class="box"><h4>Family, romance & bonds</h4>${sortRelations(s.relations).map(r => `<div class="chg">${esc(r.rel)}: ${pawnLink(r.id, r.name)}${r.dead ? ' <span class="c-muted">(dead)</span>' : ""}</div>`).join("")}</div>`;
     left += opinionsBox(p);
     if (s.records && Object.keys(s.records).length) left += `<div class="box"><h4>Records</h4><table class="rec">${Object.entries(s.records).map(([k, v]) =>
       `<tr><td>${esc(k)}</td><td>${esc(Number.isInteger(v) ? v : (Math.round(v * 10) / 10) + (/time/i.test(k) ? " days" : ""))}</td></tr>`).join("")}</table></div>`;
+
+    const tabs = `<div class="ptabs">${[["story", "Story"], ["health", "Health"]].map(([k, l]) => `<button class="chip${state.pawnTab === k ? " on" : ""}" data-ptab="${k}">${l}</button>`).join("")}</div>`;
+    if (state.pawnTab !== "story") return `<button class="btn back" id="back">← Back</button><div class="bio"><div>${left}</div><div>${tabs}${renderHealth(p)}</div></div>`;
 
     const items = [];
     for (const e of p.events) if (state.showRewound || !e.rewound)
@@ -702,8 +743,233 @@
     const toolbar = `<div class="toolbar" style="margin-bottom:8px"><input type="search" id="sq" placeholder="Search ${esc(p.name || "this pawn")}'s story..." value="${esc(state.storyQ)}">${huntToggle}</div>
       <div class="toolbar">${chips}</div>`;
     const right = `<div class="box"><h4>Story</h4>${items.length > 1 ? toolbar : ""}${shown.length ? shown.map(i => i.html()).join("") : `<div class="empty">${items.length ? "Nothing matches." : "Nothing recorded yet."}</div>`}</div>`;
-    return `<button class="btn back" id="back">← Back</button><div class="bio"><div>${left}</div><div>${right}</div></div>`;
+    return `<button class="btn back" id="back">← Back</button><div class="bio"><div>${left}</div><div>${tabs}${right}</div></div>`;
   }
+
+  const PAIN = [[0.8, "Extreme"], [0.4, "Intense"], [0.15, "Serious"], [0.01, "Minor"]];
+  const painLabel = v => (PAIN.find(([t]) => v >= t) || [0, "None"])[1];
+  const pct = v => `${Math.round(v * 100)}%`;
+  const HEALTH_GROUPS = [["disease", "Diseases"], ["injury", "Injuries"], ["missing", "Missing body parts"], ["scar", "Scars and permanent injuries"],
+    ["chronic", "Chronic conditions"], ["addiction", "Addictions"], ["condition", "Other conditions"], ["implant", "Implants and prosthetics"], ["effect", "Other effects"]];
+  const GAINED = { injury: "Injured", scar: "Scarred", missing: "Lost", disease: "Fell ill", chronic: "Developed", addiction: "Became addicted", implant: "Installed", condition: "New", effect: "Started" };
+  const LOST = { injury: "Healed", scar: "Scar gone", missing: "Restored", disease: "Recovered from", chronic: "Cured", addiction: "Overcame", implant: "Removed", condition: "Gone", effect: "Wore off" };
+
+  function conditionBadges(c) {
+    const badges = [];
+    if (c.bleeding) badges.push(`<span class="hb bad">bleeding</span>`);
+    if (c.tended === false && c.kind !== "implant") badges.push(`<span class="hb warn">needs tending</span>`);
+    if (c.tended === true) badges.push(`<span class="hb">tended</span>`);
+    if (c.lethal) badges.push(`<span class="hb bad">can be fatal</span>`);
+    return badges.join(" ");
+  }
+
+  function conditionRow(c, n) {
+    const bar = (label, v, color) => `<span>${label}</span><div class="bar"><i style="width:${pct(Math.min(1, v))};background:${color}"></i></div><span>${pct(v)}</span>`;
+    const bars = c.kind === "disease" && (c.severity != null || c.immunity != null)
+      ? `<div class="dz">${c.severity != null ? bar("Severity", c.severity, "var(--bad)") : ""}${c.immunity != null ? bar("Immunity", c.immunity, "var(--good)") : ""}</div>` : "";
+    return `<div class="hc"><span class="hp">${esc(c.part || "Whole body")}</span><span>${esc(c.kind === "missing" && c.label === c.part ? "Missing" : c.label)}${n > 1 ? ` ×${n}` : ""}${c.note ? ` <span class="c-muted">(${esc(c.note)})</span>` : ""}${c.from ? ` <span class="c-muted">· ${esc(c.from)}</span>` : ""} ${conditionBadges(c)}</span>${bars}</div>`;
+  }
+
+  function healthHistory(recs) {
+    const key = c => `${c.kind}|${c.label}|${c.part || ""}`;
+    const rows = [];
+    for (let i = 1; i < recs.length; i++) {
+      const before = new Map(recs[i - 1].health.conditions.map(c => [key(c), c])), after = new Map(recs[i].health.conditions.map(c => [key(c), c]));
+      const changes = new Map();
+      const add = (verb, cls, c) => {
+        if (!changes.has(verb)) changes.set(verb, { cls, items: [] });
+        const item = c.part ? `${c.label} (${c.part})` : c.label;
+        if (!changes.get(verb).items.includes(item)) changes.get(verb).items.push(item);
+      };
+      for (const [k, c] of after) if (!before.has(k)) add(GAINED[c.kind] || "New", c.kind === "implant" ? "up" : "down", c);
+      for (const [k, c] of before) if (!after.has(k)) add(LOST[c.kind] || "Gone", c.kind === "implant" ? "down" : "up", c);
+      if (changes.size) rows.push({ r: recs[i], changes });
+    }
+    return rows.reverse();
+  }
+
+  function healthHeader(p) {
+    const recs = p.health;
+    if (!recs.length) return null;
+    const last = recs[recs.length - 1];
+    return { last, h: last.health, when: last.dead ? `at death, ${esc(last.date)}` : `as of ${esc(last.date)}` };
+  }
+
+  function noHealth(p) {
+    const s = p.latest;
+    return `<div class="box"><h4>Health</h4><div class="c-muted" style="margin-bottom:8px">No detailed health recorded yet. It's recorded by newer versions of Rimlore and appears here after the game runs for a moment.</div>
+      ${s.health != null ? `<div class="mini">Overall health ${pct(s.health)}</div>` : ""}
+      ${(s.hediffs || []).length ? `<div class="tags" style="margin-top:8px">${s.hediffs.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}</div>`;
+  }
+
+  function renderHealth(p) {
+    const hh = healthHeader(p);
+    if (!hh) return noHealth(p);
+    const { last, h, when } = hh, recs = p.health;
+    const capColor = v => v < 0.5 ? "down" : v < 0.995 ? "warnc" : v > 1.005 ? "up" : "";
+    const overview = `<div class="cap"><span>Overall health</span><div class="bar"><i style="width:${pct(Math.min(1, h.summary))}"></i></div><span class="v ${capColor(h.summary)}">${pct(h.summary)}</span></div>
+      <div class="cap"><span>Pain</span><div class="bar"><i style="width:${pct(Math.min(1, h.pain))};background:var(--bad)"></i></div><span class="v">${painLabel(h.pain)}</span></div>
+      ${h.bleed > 0 ? `<div class="cap"><span>Bleeding</span><div class="bar"><i style="width:${pct(Math.min(1, h.bleed))};background:var(--bad)"></i></div><span class="v down">${pct(h.bleed)}/day</span></div>` : ""}`;
+    const caps = (h.capacities || []).map(c => `<div class="cap"><span>${esc(c.name)}</span><div class="bar"><i style="width:${pct(Math.min(1, c.level))}"></i></div><span class="v ${capColor(c.level)}">${pct(c.level)}</span></div>`).join("");
+
+    const groups = HEALTH_GROUPS.map(([kind, title]) => {
+      const list = (h.conditions || []).filter(c => c.kind === kind);
+      if (!list.length) return "";
+      const counted = new Map();
+      for (const c of list) {
+        const k = JSON.stringify(c);
+        counted.set(k, { c, n: (counted.get(k)?.n || 0) + 1 });
+      }
+      const rows = [...counted.values()].sort((a, b) => (a.c.part || "").localeCompare(b.c.part || "")).map(x => conditionRow(x.c, x.n)).join("");
+      return `<div class="hgroup">${title}</div>${rows}`;
+    }).join("");
+
+    const hist = healthHistory(recs);
+    const histHtml = hist.length ? hist.slice(0, 200).map(({ r, changes }) => `<div class="hh"><span class="d">${esc(r.date)}${r.dead ? "<br>at death" : ""}</span><div>${[...changes].map(([verb, x]) =>
+      `<span class="${x.cls}">${esc(verb)}:</span> ${esc(x.items.join(", "))}`).join("<br>")}</div></div>`).join("")
+      : `<div class="c-muted">No changes recorded yet.</div>`;
+
+    return `<div class="box"><h4>Health <span style="text-transform:none;letter-spacing:0;font-weight:400">· ${when}</span></h4>${overview}</div>
+      ${bodyBox(p, h)}
+      ${caps ? `<div class="box"><h4>Capacities</h4>${caps}</div>` : ""}
+      <div class="box"><h4>Conditions</h4>${groups || `<div class="c-muted">${last.dead ? "No conditions at death." : "Healthy. No injuries, diseases or other conditions."}</div>`}</div>
+      <div class="box"><h4>Health history <span style="text-transform:none;letter-spacing:0;font-weight:400">· since ${esc(recs[0].date)}</span></h4>${histHtml}</div>`;
+  }
+
+  const REGION_OF = { Head: "head", Skull: "head", Brain: "head", Eye: "head", Ear: "head", Nose: "head", Jaw: "head", Tongue: "head", Neck: "neck",
+    Torso: "torso", Sternum: "torso", Rib: "torso", Pelvis: "torso", Spine: "torso", Stomach: "torso", Heart: "torso", Lung: "torso", Kidney: "torso", Liver: "torso",
+    Shoulder: "arm", Clavicle: "arm", Arm: "arm", Humerus: "arm", Radius: "arm", Hand: "hand", Finger: "hand", Leg: "leg", Femur: "leg", Tibia: "leg", Foot: "foot", Toe: "foot" };
+  const REGION_ORDER = ["head", "neck", "torso", "arm", "hand", "leg", "foot"];
+  const FINGERS = [/thumb/i, /index/i, /middle/i, /ring/i, /pinky|little/i];
+  const TOES = [/big/i, /second/i, /middle|third/i, /fourth/i, /little|fifth|pinky/i];
+  const FIGURE = [
+    ["uarm", "M74 82 C62 82 56 90 55 102 L52 146 C56 150 64 150 68 147 L72 112 C74 100 76 90 74 82 Z"],
+    ["farm", "M52 148 C56 152 64 152 68 149 L64 200 C60 203 52 203 48 200 Z"],
+    ["hand", "M48 202 C52 205 60 205 64 202 C66 212 64 224 57 228 C50 226 46 214 48 202 Z"],
+    ["thigh", "M78 214 C86 226 94 232 99 234 L97 300 C92 304 84 304 80 300 C76 270 74 240 78 214 Z"],
+    ["shin", "M80 302 C84 306 92 306 97 302 L95 360 C91 363 85 363 82 360 C80 340 79 320 80 302 Z"],
+    ["foot", "M82 362 C86 365 92 365 95 362 C97 370 96 378 93 382 L78 382 C76 376 78 368 82 362 Z"],
+  ];
+  const CENTRE = [
+    ["neck", "M91 60 L109 60 L111 82 L89 82 Z"],
+    ["pelvis", "M74 186 L126 186 C130 200 128 212 122 218 C114 226 106 230 100 232 C94 230 86 226 78 218 C72 212 70 200 74 186 Z"],
+    ["torso", "M74 82 C80 76 90 76 100 78 C110 76 120 76 126 82 C130 100 128 122 124 140 C121 158 122 172 126 186 L74 186 C78 172 79 158 76 140 C72 122 70 100 74 82 Z"],
+    ["head", "M100 12 C114 12 122 24 122 40 C122 56 112 68 100 68 C88 68 78 56 78 40 C78 24 86 12 100 12 Z"],
+  ];
+  const HAND_ICON = [
+    ["palm", `<path d="M9 24 C9 20 31 20 31 24 L31 42 C31 50 26 54 20 54 C14 54 9 50 9 42 Z"/>`],
+    ["finger5", `<rect x="9.5" y="13" width="5" height="13" rx="2.5"/>`], ["finger4", `<rect x="15" y="6" width="5" height="19" rx="2.5"/>`],
+    ["finger3", `<rect x="20.5" y="3" width="5" height="22" rx="2.5"/>`], ["finger2", `<rect x="26" y="7" width="5" height="18" rx="2.5"/>`],
+    ["finger1", `<rect x="31" y="27" width="5" height="14" rx="2.5" transform="rotate(28 33.5 34)"/>`],
+  ];
+  const FOOT_ICON = [
+    ["sole", `<path d="M7 22 C7 16 23 14 25 22 C26 32 24 46 18 52 C12 54 8 48 8 40 C7 34 7 28 7 22 Z"/>`],
+    ["toe1", `<ellipse cx="20.5" cy="11.5" rx="4.2" ry="5"/>`], ["toe2", `<ellipse cx="14.8" cy="8.5" rx="2.8" ry="3.1"/>`],
+    ["toe3", `<ellipse cx="10.4" cy="10" rx="2.5" ry="2.8"/>`], ["toe4", `<ellipse cx="6.8" cy="13" rx="2.2" ry="2.5"/>`],
+    ["toe5", `<ellipse cx="4.6" cy="17" rx="2" ry="2.2"/>`],
+  ];
+  const SEG_NAMES = { uarm: "upper arm", farm: "forearm", hand: "hand", palm: "hand", thigh: "thigh", shin: "lower leg", foot: "foot", sole: "foot", neck: "Neck", pelvis: "Pelvis", torso: "Torso", head: "Head",
+    finger1: "thumb", finger2: "index finger", finger3: "middle finger", finger4: "ring finger", finger5: "pinky", toe1: "big toe", toe2: "second toe", toe3: "middle toe", toe4: "fourth toe", toe5: "little toe" };
+
+  function segmentsOf(part) {
+    const S = /^left\b/i.test(part.label) ? "L" : /^right\b/i.test(part.label) ? "R" : "";
+    const sided = list => S ? list.map(x => x + S) : [];
+    const fingers = sided(["finger1", "finger2", "finger3", "finger4", "finger5"]), toes = sided(["toe1", "toe2", "toe3", "toe4", "toe5"]);
+    const arm = sided(["uarm", "farm"]), hand = sided(["hand", "palm"]), leg = sided(["thigh", "shin"]), foot = sided(["foot", "sole"]);
+    const pick = (list, label) => { const i = list.findIndex(re => re.test(label)); return i < 0 ? [] : [i + 1]; };
+    switch (part.def) {
+      case "Shoulder": case "Clavicle": return { own: sided(["uarm"]), below: [...arm, ...hand, ...fingers] };
+      case "Arm": return { own: arm, below: [...arm, ...hand, ...fingers] };
+      case "Humerus": return { own: sided(["uarm"]) };
+      case "Radius": return { own: sided(["farm"]) };
+      case "Hand": return { own: hand, below: [...hand, ...fingers] };
+      case "Finger": return { own: S ? pick(FINGERS, part.label).map(i => `finger${i}${S}`) : [], tiny: true };
+      case "Leg": return { own: leg, below: [...leg, ...foot, ...toes] };
+      case "Femur": return { own: sided(["thigh"]) };
+      case "Tibia": return { own: sided(["shin"]) };
+      case "Foot": return { own: foot, below: [...foot, ...toes] };
+      case "Toe": return { own: S ? pick(TOES, part.label).map(i => `toe${i}${S}`) : [], tiny: true };
+      case "Neck": return { own: ["neck"] };
+      case "Pelvis": return { own: ["pelvis"] };
+    }
+    const region = REGION_OF[part.def];
+    return region === "head" || region === "torso" ? { own: [region] } : null;
+  }
+
+  function bodySegments(parts, onPart) {
+    const segs = new Map();
+    const seg = k => { if (!segs.has(k)) segs.set(k, { worst: 1, gone: false, impl: false, parts: [] }); return segs.get(k); };
+    for (const part of parts) {
+      const m = segmentsOf(part);
+      if (!m) continue;
+      const affected = part.missing || (onPart.get(part.label) || []).some(c => c.kind === "implant") ? (m.below || m.own) : m.own;
+      const implant = (onPart.get(part.label) || []).some(c => c.kind === "implant");
+      for (const k of affected) {
+        const g = seg(k);
+        if (!g.parts.includes(part)) g.parts.push(part);
+        if (part.missing) {
+          if (m.below || m.tiny) g.gone = true;
+          else g.worst = Math.min(g.worst, 0.5);
+        } else if (implant) {
+          g.impl = true;
+        }
+        if (!part.missing && m.own.includes(k)) g.worst = Math.min(g.worst, part.max ? part.hp / part.max : 1);
+      }
+    }
+    return segs;
+  }
+
+  function bodyFigure(segs) {
+    const cls = g => !g ? "" : g.gone ? "gone" : g.worst < 0.4 ? "s3" : g.worst < 0.75 ? "s2" : g.worst < 0.999 ? "s1" : g.impl ? "impl" : "";
+    const tip = (key, side) => {
+      const g = segs.get(key + side), base = SEG_NAMES[key] || key;
+      const name = side ? `${side === "L" ? "Left" : "Right"} ${base}` : base;
+      return !g ? `${name}: healthy` : `${name}: ` + g.parts.map(x => `${x.label} ${x.missing ? "missing" : `${x.hp}/${x.max}`}`).join(", ");
+    };
+    const path = (key, side, d, transform) => `<path d="${d}" class="${cls(segs.get(key + side))}"${transform ? ` transform="${transform}"` : ""}><title>${esc(tip(key, side))}</title></path>`;
+    const mirror = "translate(200 0) scale(-1 1)";
+    const limbs = FIGURE.map(([k, d]) => path(k, "R", d) + path(k, "L", d, mirror)).join("");
+    const centre = CENTRE.map(([k, d]) => path(k, "", d)).join("");
+    const icon = (shapes, side, x, w, flip) => `<g transform="translate(${flip ? x + w * 1.4 : x} 2) scale(${flip ? -1.4 : 1.4} 1.4)">${shapes.map(([k, el]) =>
+      el.replace(/\/>$/, ` class="${cls(segs.get(k + side))}"><title>${esc(tip(k, side))}</title></${el.match(/^<(\w+)/)[1]}>`)).join("")}</g>`;
+    return `<div class="figwrap"><svg class="fig" viewBox="0 0 200 400" role="img" aria-label="Body diagram">${limbs}${centre}<text x="62" y="398">R</text><text x="138" y="398">L</text></svg>
+      <svg class="fig icons" viewBox="0 0 200 82" role="img" aria-label="Hands and feet">${icon(HAND_ICON, "R", 2, 40, false)}${icon(HAND_ICON, "L", 56, 40, true)}${icon(FOOT_ICON, "R", 116, 30, false)}${icon(FOOT_ICON, "L", 158, 30, true)}</svg>
+      <div class="legend"><span><i style="background:#f0c75e"></i>Hurt</span><span><i style="background:#e8873a"></i>Badly hurt</span><span><i style="background:#d9483b"></i>Critical</span><span><i style="border-style:dashed"></i>Missing</span><span><i style="background:#8db4f2"></i>Implant</span></div></div>`;
+  }
+
+  function bodyBox(p, h) {
+    const parts = h.parts;
+    if (!parts) return "";
+
+    const onPart = new Map();
+    for (const c of h.conditions || []) {
+      const k = c.part || "";
+      if (!onPart.has(k)) onPart.set(k, []);
+      onPart.get(k).push(c);
+    }
+    const humanlike = PORTRAIT_KINDS.has(p.latest.kind);
+    const figure = humanlike ? bodyFigure(bodySegments(parts, onPart)) : "";
+
+    const rank = part => { const r = REGION_OF[part.def]; const i = REGION_ORDER.indexOf(r); return i < 0 ? REGION_ORDER.length : i; };
+    const sorted = parts.slice().sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label));
+    const whole = onPart.get("") || [];
+    const condText = list => list.map(c => {
+      const badges = conditionBadges(c);
+      return `${esc(c.kind === "missing" && c.label === c.part ? "Missing" : c.label)}${c.from ? ` <span class="c-muted">· ${esc(c.from)}</span>` : ""}${badges ? " " + badges : ""}`;
+    }).join(", ");
+    const rows = sorted.map(part => {
+      const ratio = part.missing ? 0 : part.max ? part.hp / part.max : 1;
+      const color = part.missing ? "var(--muted)" : ratio < 0.4 ? "#d4483b" : ratio < 0.75 ? "#e08a3c" : ratio < 0.999 ? "#e2c25b" : "var(--good)";
+      const list = onPart.get(part.label) || [];
+      return `<div class="bp"><div class="top"><span>${esc(part.label)}</span><div class="bar"><i style="width:${pct(ratio)};background:${color}"></i></div><span class="hpv">${part.missing ? "missing" : `${part.hp} / ${part.max}`}</span></div>${list.length ? `<div class="on">${condText(list)}</div>` : ""}</div>`;
+    }).join("");
+    const wholeRow = whole.length ? `<div class="bp"><div class="top"><span>Whole body</span><span></span><span></span></div><div class="on">${condText(whole)}</div></div>` : "";
+
+    return `<div class="box"><h4>Body</h4>
+      <div class="${humanlike ? "body" : ""}">${figure}<div>${rows || wholeRow ? wholeRow + rows : `<div class="c-muted">No damaged body parts.</div>`}</div></div></div>`;
+  }
+
+
 
   const ROMANCE = /^(spouse|husband|wife|fianc|lover|boyfriend|girlfriend)/i;
   const REL_ORDER = [ROMANCE, /bond/i, /^(mother|father|parent)/i, /^(son|daughter|child)/i, /^(brother|sister|sibling)/i, /^(half)/i,
@@ -859,7 +1125,7 @@
   }
 
   document.addEventListener("click", ev => {
-    const t = ev.target.closest("[data-tab],[data-filter],[data-story],[data-pawn],[data-ideo],#back,#reload");
+    const t = ev.target.closest("[data-tab],[data-filter],[data-story],[data-ptab],[data-pawn],[data-ideo],#back,#reload");
     if (!t) return;
     if (t.dataset.ideo) {
       state.tab = "beliefs"; state.pawn = null; render();
@@ -871,7 +1137,8 @@
     if (t.dataset.tab) { state.tab = t.dataset.tab; state.pawn = null; state.q = ""; }
     if (t.dataset.filter) state.filter = t.dataset.filter;
     if (t.dataset.story) state.storyFilter = t.dataset.story;
-    if (t.dataset.pawn) { if (t.dataset.pawn !== state.pawn) { state.storyFilter = "all"; state.storyQ = ""; } state.pawn = t.dataset.pawn; history.pushState({ pawn: state.pawn }, ""); window.scrollTo(0, 0); }
+    if (t.dataset.ptab) state.pawnTab = t.dataset.ptab;
+    if (t.dataset.pawn) { if (t.dataset.pawn !== state.pawn) { state.storyFilter = "all"; state.storyQ = ""; state.pawnTab = "story"; } state.pawn = t.dataset.pawn; history.pushState({ pawn: state.pawn }, ""); window.scrollTo(0, 0); }
     render();
   });
   document.addEventListener("toggle", ev => {
